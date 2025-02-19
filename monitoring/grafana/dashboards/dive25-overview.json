@@ -1,0 +1,96 @@
+// grafana/dashboards/dive25-overview.json
+{
+    "title": "DIVE25 System Overview",
+    "uid": "dive25-main",
+    "panels": [
+        {
+            "title": "System Health Status",
+            "type": "stat",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "up{job=\"dive25-api\"}"
+                }
+            ],
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "value"
+            },
+            "fieldConfig": {
+                "mappings": [
+                    {
+                        "type": "value",
+                        "options": {
+                            "1": {
+                                "text": "Healthy",
+                                "color": "green"
+                            },
+                            "0": {
+                                "text": "Down",
+                                "color": "red"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "title": "Authentication Success Rate",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "1 - (dive25_auth_failures_total / dive25_auth_attempts_total)"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 1,
+                "thresholds": {
+                    "steps": [
+                        {
+                            "value": 0,
+                            "color": "red"
+                        },
+                        {
+                            "value": 0.9,
+                            "color": "yellow"
+                        },
+                        {
+                            "value": 0.95,
+                            "color": "green"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "title": "Document Operations",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(dive25_document_operations_total[5m])",
+                    "legendFormat": "{{operation}}"
+                }
+            ]
+        },
+        {
+            "title": "API Response Times",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(dive25_response_time_seconds_sum[5m]) / rate(dive25_response_time_seconds_count[5m])",
+                    "legendFormat": "Average Response Time"
+                }
+            ]
+        }
+    ],
+    "refresh": "10s",
+    "schemaVersion": 33,
+    "version": 1,
+    "timezone": "browser"
+}

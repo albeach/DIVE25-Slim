@@ -1,0 +1,29 @@
+# /monitoring/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+    metrics_path: '/metrics'
+
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:3000']
+    metrics_path: '/metrics'
+
+  - job_name: 'keycloak'
+    static_configs:
+      - targets: ['keycloak:8080']
+    metrics_path: '/metrics'
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['api:9100']
+    metrics_path: '/metrics'
+
+  - job_name: 'frontend'
+    static_configs:
+      - targets: ['frontend:3000']

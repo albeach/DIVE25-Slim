@@ -1,0 +1,55 @@
+2025-02-10 20:40:18,526:DEBUG:certbot._internal.main:certbot version: 2.11.0
+2025-02-10 20:40:18,526:DEBUG:certbot._internal.main:Location of certbot entry point: /usr/local/bin/certbot
+2025-02-10 20:40:18,526:DEBUG:certbot._internal.main:Arguments: ['--manual', '--preferred-challenges', 'dns', '--email', 'admin@dive25.com', '--agree-tos', '--domain', 'dive25.com', '--domain', '*.dive25.com', '--config-dir', '/Users/aubreybeach/Documents/GitHub/DIVE25/certificates/prod/config', '--work-dir', '/Users/aubreybeach/Documents/GitHub/DIVE25/certificates/prod/work', '--logs-dir', '/Users/aubreybeach/Documents/GitHub/DIVE25/certificates/prod/logs']
+2025-02-10 20:40:18,527:DEBUG:certbot._internal.main:Discovered plugins: PluginsRegistry(PluginEntryPoint#apache,PluginEntryPoint#manual,PluginEntryPoint#nginx,PluginEntryPoint#null,PluginEntryPoint#standalone,PluginEntryPoint#webroot)
+2025-02-10 20:40:18,554:DEBUG:certbot._internal.log:Root logging level set at 30
+2025-02-10 20:40:18,554:DEBUG:certbot._internal.plugins.selection:Requested authenticator manual and installer None
+2025-02-10 20:40:18,554:DEBUG:certbot._internal.plugins.selection:Single candidate plugin: * manual
+Description: Manual configuration or run your own shell scripts
+Interfaces: Authenticator, Plugin
+Entry point: EntryPoint(name='manual', value='certbot._internal.plugins.manual:Authenticator', group='certbot.plugins')
+Initialized: <certbot._internal.plugins.manual.Authenticator object at 0x10e32f440>
+Prep: True
+2025-02-10 20:40:18,554:DEBUG:certbot._internal.plugins.selection:Selected authenticator <certbot._internal.plugins.manual.Authenticator object at 0x10e32f440> and installer None
+2025-02-10 20:40:18,554:INFO:certbot._internal.plugins.selection:Plugins selected: Authenticator manual, Installer None
+2025-02-10 20:40:18,595:DEBUG:certbot._internal.main:Picked account: <Account(RegistrationResource(body=Registration(key=None, contact=(), agreement=None, status=None, terms_of_service_agreed=None, only_return_existing=None, external_account_binding=None), uri='https://acme-v02.api.letsencrypt.org/acme/acct/2221389235', new_authzr_uri=None, terms_of_service=None), 600371492feaa4ff72b516cf1d42374c, Meta(creation_dt=datetime.datetime(2025, 2, 11, 0, 27, 5, tzinfo=<UTC>), creation_host='MacBook-Pro.local', register_to_eff=None))>
+2025-02-10 20:40:18,618:DEBUG:acme.client:Sending GET request to https://acme-v02.api.letsencrypt.org/directory.
+2025-02-10 20:40:18,624:DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): acme-v02.api.letsencrypt.org:443
+2025-02-10 20:40:18,914:DEBUG:urllib3.connectionpool:https://acme-v02.api.letsencrypt.org:443 "GET /directory HTTP/11" 200 828
+2025-02-10 20:40:18,915:DEBUG:acme.client:Received response:
+HTTP 200
+Server: nginx
+Date: Tue, 11 Feb 2025 01:40:18 GMT
+Content-Type: application/json
+Content-Length: 828
+Connection: keep-alive
+Cache-Control: public, max-age=0, no-cache
+X-Frame-Options: DENY
+Strict-Transport-Security: max-age=604800
+
+{
+  "U7ILHOSVgtc": "https://community.letsencrypt.org/t/adding-random-entries-to-the-directory/33417",
+  "keyChange": "https://acme-v02.api.letsencrypt.org/acme/key-change",
+  "meta": {
+    "caaIdentities": [
+      "letsencrypt.org"
+    ],
+    "profiles": {
+      "classic": "The same profile you're accustomed to"
+    },
+    "termsOfService": "https://letsencrypt.org/documents/LE-SA-v1.4-April-3-2024.pdf",
+    "website": "https://letsencrypt.org"
+  },
+  "newAccount": "https://acme-v02.api.letsencrypt.org/acme/new-acct",
+  "newNonce": "https://acme-v02.api.letsencrypt.org/acme/new-nonce",
+  "newOrder": "https://acme-v02.api.letsencrypt.org/acme/new-order",
+  "renewalInfo": "https://acme-v02.api.letsencrypt.org/draft-ietf-acme-ari-03/renewalInfo",
+  "revokeCert": "https://acme-v02.api.letsencrypt.org/acme/revoke-cert"
+}
+2025-02-10 20:40:18,933:DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): e5.o.lencr.org:80
+2025-02-10 20:40:19,013:DEBUG:urllib3.connectionpool:http://e5.o.lencr.org:80 "POST / HTTP/11" 200 344
+2025-02-10 20:40:19,016:DEBUG:certbot.ocsp:OCSP response for certificate /Users/aubreybeach/Documents/GitHub/DIVE25/certificates/prod/config/archive/dive25.com/cert1.pem is signed by the certificate's issuer.
+2025-02-10 20:40:19,022:DEBUG:certbot.ocsp:OCSP certificate status for /Users/aubreybeach/Documents/GitHub/DIVE25/certificates/prod/config/archive/dive25.com/cert1.pem is: OCSPCertStatus.GOOD
+2025-02-10 20:40:19,026:DEBUG:certbot._internal.display.obj:Notifying user: Certificate not yet due for renewal
+2025-02-10 20:40:21,311:INFO:certbot._internal.main:Keeping the existing certificate
+2025-02-10 20:40:21,312:DEBUG:certbot._internal.display.obj:Notifying user: Certificate not yet due for renewal; no action taken.

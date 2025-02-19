@@ -1,0 +1,14 @@
+# /k8s/production/monitoring.yml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dive25-monitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: dive25-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s

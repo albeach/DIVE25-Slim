@@ -1,0 +1,61 @@
+{
+    "realm": "dive25",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "privateKey": "GENERATE_NEW_KEY",
+    "publicKey": "GENERATE_NEW_KEY",
+    "clients": [
+        {
+            "clientId": "dive25-api",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "${env.KEYCLOAK_CLIENT_SECRET}",
+            "redirectUris": [
+                "http://localhost:3000/*",
+                "https://dive25.com/*"
+            ],
+            "webOrigins": [
+                "+"
+            ],
+            "protocol": "openid-connect",
+            "attributes": {
+                "pkce.code.challenge.method": "S256"
+            },
+            "protocolMappers": [
+                {
+                    "name": "clearance",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "config": {
+                        "user.attribute": "clearance",
+                        "claim.name": "clearance",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "name": "coiTags",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "config": {
+                        "user.attribute": "coiTags",
+                        "claim.name": "coiTags",
+                        "jsonType.label": "JSON"
+                    }
+                }
+            ]
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "user",
+                "description": "Basic user role"
+            },
+            {
+                "name": "admin",
+                "description": "Administrative role"
+            }
+        ]
+    }
+}

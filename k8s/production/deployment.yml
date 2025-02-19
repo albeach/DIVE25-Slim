@@ -1,0 +1,41 @@
+# /k8s/production/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dive25-api
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dive25-api
+  template:
+    metadata:
+      labels:
+        app: dive25-api
+    spec:
+      containers:
+      - name: api
+        image: ${ECR_REGISTRY}/dive25-api:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: dive25-secrets
+              key: mongodb-uri
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

@@ -1,0 +1,33 @@
+// config/keycloak/realm-export.json
+{
+    "realm": "dive25",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "roles": {
+        "realm": [
+            {
+                "name": "user",
+                "description": "Basic user role"
+            },
+            {
+                "name": "admin",
+                "description": "Administrative role"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "dive25-api",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "${env.API_CLIENT_SECRET}",
+            "redirectUris": [
+                "https://dive25.com/*"
+            ],
+            "webOrigins": [
+                "https://dive25.com"
+            ]
+        }
+    ]
+}
