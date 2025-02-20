@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { DocumentList } from '@/components/DocumentList';
 import { useAuth } from '@/contexts/AuthContext'
 import { documentService } from '@/services/api'
 
@@ -54,4 +55,32 @@ export default function Documents() {
       </div>
     </div>
   )
+}
+
+export default function DocumentsPage() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+      return (
+          <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="mt-2">Loading...</p>
+              </div>
+          </div>
+      );
+  }
+
+  if (!isAuthenticated) {
+      return (
+          <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                  <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
+                  <p className="mt-2 text-gray-600">Please log in to view documents.</p>
+              </div>
+          </div>
+      );
+  }
+
+  return <DocumentList />;
 }
