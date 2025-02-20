@@ -16,10 +16,23 @@ api.interceptors.request.use((config) => {
     return config
 })
 
+interface Document {
+    id: string;
+    title: string;
+    content: string;
+}
+
 export const documentService = {
-    async getDocuments(params: any) {
-        const response = await api.get('/api/documents', { params })
-        return response.data
+    async getDocuments(): Promise<Document[]> {
+        // TODO: Implement actual API call
+        // This is a placeholder implementation
+        return [
+            {
+                id: '1',
+                title: 'Sample Document',
+                content: 'This is a sample document'
+            }
+        ];
     },
 
     async getDocument(id: string) {

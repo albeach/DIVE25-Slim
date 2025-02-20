@@ -40,13 +40,21 @@ setup_environment() {
     log "${YELLOW}Setting up environment variables...${NC}"
     
     if [ ! -f .env ]; then
+        if [ ! -f .env.template ]; then
+            log "${RED}Error: .env.template file not found${NC}"
+            exit 1
+        fi
+        
         cp .env.template .env
         
         # Generate secure passwords and keys
         sed -i "s/MONGO_ROOT_PASSWORD=.*/MONGO_ROOT_PASSWORD=$(generate_secure_string)/" .env
         sed -i "s/KEYCLOAK_ADMIN_PASSWORD=.*/KEYCLOAK_ADMIN_PASSWORD=$(generate_secure_string)/" .env
+        sed -i "s/KEYCLOAK_DB_PASSWORD=.*/KEYCLOAK_DB_PASSWORD=$(generate_secure_string)/" .env
+        sed -i "s/KEYCLOAK_CLIENT_SECRET=.*/KEYCLOAK_CLIENT_SECRET=$(generate_secure_string)/" .env
         sed -i "s/JWT_SECRET=.*/JWT_SECRET=$(generate_secure_string)/" .env
         sed -i "s/API_KEY=.*/API_KEY=$(generate_secure_string)/" .env
+        sed -i "s/GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=$(generate_secure_string)/" .env
         
         log "${GREEN}Environment file created with secure credentials${NC}"
     else

@@ -2,65 +2,53 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import { documentService } from '@/services/api'
 
 interface Document {
-  _id: string
+  id: string
   title: string
-  clearance: string
-  metadata: {
-    createdAt: string
-    createdBy: string
-  }
+  content: string
 }
 
 export default function Documents() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const response = await documentService.getDocuments({})
-        setDocuments(response.data)
-      } catch (error) {
-        console.error('Failed to fetch documents:', error)
-      } finally {
-        setLoading(false)
+    async function loadDocuments() {
+      if (isAuthenticated) {
+        try {
+          const docs = await documentService.getDocuments()
+          setDocuments(docs)
+        } catch (error) {
+          console.error('Failed to load documents:', error)
+        } finally {
+          setLoading(false)
+        }
       }
     }
 
-    if (isAuthenticated) {
-      fetchDocuments()
-    }
+    loadDocuments()
   }, [isAuthenticated])
 
-  if (!isAuthenticated) {
-    return <div>Please log in to access documents.</div>
+  if (authLoading || loading) {
+    return <div>Loading...</div>
   }
 
-  if (loading) {
-    return <div>Loading documents...</div>
+  if (!isAuthenticated) {
+    return <div>Please log in to view documents</div>
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Documents</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {documents.map((doc) => (
-          <div 
-            key={doc._id} 
-            className="p-4 border rounded-lg shadow bg-white"
-          >
-            <h2 className="text-lg font-semibold">{doc.title}</h2>
-            <p className="text-sm text-gray-600">
-              Classification: {doc.clearance}
-            </p>
-            <p className="text-sm text-gray-500">
-              Created: {new Date(doc.metadata.createdAt).toLocaleDateString()}
-            </p>
+    <div style={{ padding: '2rem' }}>
+      <h1>Documents</h1>
+      <div style={{ marginTop: '2rem' }}>
+        {documents.map(doc => (
+          <div key={doc.id} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #ccc' }}>
+            <h2>{doc.title}</h2>
+            <p>{doc.content}</p>
           </div>
         ))}
       </div>

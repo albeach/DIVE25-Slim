@@ -3,40 +3,61 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function Home() {
   const router = useRouter()
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, loading: authLoading, login } = useAuth()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/documents')
-    } else {
+    if (!authLoading) {
+      if (isAuthenticated) {
+        router.push('/documents')
+      }
       setLoading(false)
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, authLoading, router])
 
-  if (loading) {
-    return <div>Loading...</div>
+  if (loading || authLoading) {
+    return (
+      <main style={{ 
+        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh'
+      }}>
+        <p>Loading...</p>
+      </main>
+    )
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="max-w-5xl w-full">
-        <h1 className="text-4xl font-bold mb-8 text-center">
-          Welcome to DIVE25
-        </h1>
-        <div className="flex justify-center">
-          <button
-            onClick={() => login()}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-          >
-            Sign In
-          </button>
-        </div>
-      </div>
+    <main style={{ 
+      padding: '2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh'
+    }}>
+      <h1 style={{ marginBottom: '1rem' }}>DIVE25</h1>
+      <p style={{ marginBottom: '2rem' }}>Welcome to DIVE25</p>
+      <button
+        onClick={login}
+        style={{
+          padding: '0.5rem 1rem',
+          backgroundColor: '#0070f3',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Login
+      </button>
     </main>
-  )
+  );
 }

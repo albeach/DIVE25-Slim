@@ -1,67 +1,105 @@
 // /frontend/src/contexts/AuthContext.tsx
-import { createContext, useContext, useState, useEffect } from 'react'
-import Keycloak from 'keycloak-js'
+'use client';
 
-const keycloak = new Keycloak({
-  url: process.env.NEXT_PUBLIC_KEYCLOAK_URL,
-  realm: 'dive25',
-  clientId: 'dive25-api'
-})
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type Keycloak from 'keycloak-js'
 
-interface AuthContextType {
-  isAuthenticated: boolean
-  user: any
-  login: () => Promise<void>
-  logout: () => Promise<void>
-  token: string | null
+interface User {
+  sub?: string;
+  email?: string;
+  name?: string;
+  preferred_username?: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+interface AuthContextType {
+  isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
+}
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  user: null,
+  token: null,
+  loading: true,
+  login: async () => {},
+  logout: async () => {},
+});
+
+let keycloak: Keycloak;
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const initKeycloak = async () => {
+    const initializeKeycloak = async () => {
       try {
+        // Dynamically import Keycloak only on client side
+        const Keycloak = (await import('keycloak-js')).default;
+        keycloak = new Keycloak({
+          url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8080',
+          realm: 'dive25',
+          clientId: 'dive25-frontend'
+        });
+
         const authenticated = await keycloak.init({
           onLoad: 'check-sso',
           silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html'
         })
 
         setIsAuthenticated(authenticated)
-        if (authenticated) {
-          setUser(keycloak.tokenParsed)
-          setToken(keycloak.token)
+        if (authenticated && keycloak.tokenParsed) {
+          setUser({
+            sub: keycloak.tokenParsed.sub,
+            email: keycloak.tokenParsed.email,
+            name: keycloak.tokenParsed.name,
+            preferred_username: keycloak.tokenParsed.preferred_username
+          })
+          if (keycloak.token) {
+            setToken(keycloak.token)
+          }
         }
       } catch (error) {
         console.error('Failed to initialize Keycloak:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    initKeycloak()
+    initializeKeycloak()
   }, [])
 
   const login = async () => {
     try {
-      await keycloak.login()
+      if (keycloak) {
+        await keycloak.login()
+      }
     } catch (error) {
-      console.error('Login failed:', error)
+      console.error('Failed to login:', error)
     }
   }
 
   const logout = async () => {
     try {
-      await keycloak.logout()
+      if (keycloak) {
+        await keycloak.logout()
+        setUser(null)
+        setToken(null)
+        setIsAuthenticated(false)
+      }
     } catch (error) {
-      console.error('Logout failed:', error)
+      console.error('Failed to logout:', error)
     }
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, token }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
@@ -69,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
