@@ -1,6 +1,15 @@
 // src/services/MetricsService.ts
 
 export class MetricsService {
+    private static instance: MetricsService;
+
+    public static getInstance(): MetricsService {
+        if (!MetricsService.instance) {
+            MetricsService.instance = new MetricsService();
+        }
+        return MetricsService.instance;
+    }
+
     private readonly metrics: {
         // Track overall API health
         apiRequests: prometheus.Counter;
@@ -93,10 +102,15 @@ export class MetricsService {
     }
 
     // Record document operations
-    public recordDocumentOperation(operation: string, clearanceLevel: string): void {
-        this.metrics.documentOperations.inc({
-            operation,
-            clearance_level: clearanceLevel
-        });
+    public recordDocumentOperation(operation: string, clearance: string, timeMs: number): void {
+        // Implementation
+    }
+
+    public recordDocumentError(operation: string, error: string): void {
+        // Implementation
+    }
+
+    public recordAccessDenial(country: string, clearance: string): void {
+        // Implementation
     }
 }
