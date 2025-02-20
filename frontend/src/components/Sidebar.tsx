@@ -1,55 +1,37 @@
 // /frontend/src/components/Sidebar.tsx
+'use client';
+
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 export const Sidebar = () => {
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
 
     return (
-        <div className="w-64 bg-white shadow-md p-6">
-            <div className="space-y-6">
+        <div className="w-64 bg-gray-100 min-h-screen p-4">
+            {isAuthenticated && user && (
                 <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Security Attributes
-                    </h3>
+                    <h2 className="text-lg font-semibold">User Info</h2>
                     <div className="mt-2 space-y-1">
                         <div className="text-sm">
-                            <span className="font-medium">Clearance:</span> {user?.clearance}
+                            <span className="font-medium">Clearance:</span> {user.securityAttributes?.clearance}
                         </div>
                         <div className="text-sm">
-                            <span className="font-medium">Country:</span> {user?.countryOfAffiliation}
+                            <span className="font-medium">Country:</span> {user.securityAttributes?.releasableTo?.[0]}
                         </div>
-                        {user?.coiTags && (
-                            <div className="text-sm">
-                                <span className="font-medium">COI Tags:</span>
-                                <div className="mt-1 space-y-1">
-                                    {user.coiTags.map(tag => (
-                                        <span 
-                                            key={tag}
-                                            className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded mr-1"
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
+                    <hr className="my-4" />
+                    <nav>
+                        <ul className="space-y-2">
+                            <li>
+                                <Link href="/documents" className="text-blue-600 hover:text-blue-800">
+                                    Documents
+                                </Link>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
-
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Quick Actions
-                    </h3>
-                    <div className="mt-2 space-y-1">
-                        <button 
-                            className="w-full text-left px-2 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
-                            onClick={() => window.location.href = '/documents/new'}
-                        >
-                            Create New Document
-                        </button>
-                    </div>
-                </div>
-            </div>
+            )}
         </div>
     );
 };

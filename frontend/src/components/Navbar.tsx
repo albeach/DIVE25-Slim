@@ -1,48 +1,35 @@
 // /frontend/src/components/Navbar.tsx
+'use client';
+
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 export const Navbar = () => {
-    const { user, logout } = useAuth();
+    const { user, isAuthenticated, logout } = useAuth();
 
     return (
-        <nav className="bg-gray-800 text-white">
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="flex items-center justify-between h-16">
-                    <div className="flex items-center">
-                        <Link href="/" className="text-xl font-bold">
-                            DIVE25
-                        </Link>
-                        <div className="ml-10 flex items-baseline space-x-4">
-                            <Link 
-                                href="/documents" 
-                                className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
-                            >
-                                Documents
-                            </Link>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center">
-                        {user && (
-                            <div className="flex items-center space-x-4">
-                                <span className="text-sm">
-                                    {user.preferred_username}
-                                </span>
-                                <span className="px-2 py-1 text-xs bg-red-700 rounded">
-                                    {user.clearance}
-                                </span>
-                                <button
-                                    onClick={logout}
-                                    className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
-                                >
-                                    Logout
-                                </button>
-                            </div>
+        <nav className="bg-gray-800 text-white p-4">
+            <div className="container mx-auto flex justify-between items-center">
+                <Link href="/" className="text-xl font-bold">DIVE25</Link>
+                {isAuthenticated && user && (
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm">
+                            {user.preferred_username}
+                        </span>
+                        {user.securityAttributes && (
+                            <span className="px-2 py-1 text-xs bg-red-700 rounded">
+                                {user.securityAttributes.clearance}
+                            </span>
                         )}
+                        <button
+                            onClick={logout}
+                            className="text-sm bg-red-600 px-3 py-1 rounded hover:bg-red-700"
+                        >
+                            Logout
+                        </button>
                     </div>
-                </div>
+                )}
             </div>
         </nav>
     );
-}
+};

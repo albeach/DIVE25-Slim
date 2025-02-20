@@ -1,29 +1,31 @@
 // /frontend/src/services/api.ts
-import axios, { AxiosError, AxiosRequestConfig } from 'axios'
+import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 
-// Extend AxiosRequestConfig to include metadata
-interface RequestConfigWithMetadata extends AxiosRequestConfig {
+// Extend InternalAxiosRequestConfig to include metadata
+interface RequestConfigWithMetadata extends InternalAxiosRequestConfig {
     metadata?: {
-        startTime: Date;
-    };
+        clearance: string
+        releasableTo: string[]
+        startTime?: Date
+    }
 }
 
 interface DocumentMetadata {
-    createdAt: Date;
-    createdBy: string;
-    lastModified: Date;
-    version: number;
+    createdAt: string
+    createdBy: string
+    lastModified: string
+    version: number
 }
 
-interface Document {
-    _id?: string;
-    title: string;
-    content: string;
-    clearance: string;
-    releasableTo: string[];
-    coiTags?: string[];
-    lacvCode?: string;
-    metadata: DocumentMetadata;
+interface APIDocument {
+    _id?: string
+    title: string
+    content: string
+    clearance: string
+    releasableTo: string[]
+    coiTags?: string[]
+    lacvCode?: string
+    metadata: DocumentMetadata
 }
 
 interface CreateDocumentDTO {
@@ -38,19 +40,27 @@ interface CreateDocumentDTO {
 interface UpdateDocumentDTO extends Partial<CreateDocumentDTO> { }
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
     headers: {
         'Content-Type': 'application/json'
     }
 })
 
 // Add auth token and timing information to requests
-api.interceptors.request.use((config: RequestConfigWithMetadata) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token')
     if (token) {
         config.headers.Authorization = `Bearer ${token}`
     }
-    config.metadata = { startTime: new Date() }
+
+    // Add timing metadata
+    const configWithMeta = config as RequestConfigWithMetadata
+    configWithMeta.metadata = {
+        clearance: configWithMeta.metadata?.clearance || 'UNCLASSIFIED',
+        releasableTo: configWithMeta.metadata?.releasableTo || ['NATO'],
+        startTime: new Date()
+    }
+
     return config
 })
 
@@ -62,10 +72,10 @@ api.interceptors.response.use(
             const duration = new Date().getTime() - config.metadata.startTime.getTime()
             // Send timing metric to backend
             api.post('/api/metrics/timing', {
-                endpoint: config.url,
+                path: config.url,
                 duration,
                 status: response.status
-            }).catch(() => { }) // Silent fail for metrics
+            }).catch(console.error) // Don't block on metrics
         }
         return response
     },
@@ -99,14 +109,14 @@ api.interceptors.response.use(
     }
 )
 
-export const documentService = {
-    async getDocuments(): Promise<Document[]> {
-        const response = await api.get<Document[]>('/api/documents')
+const documentService = {
+    async getDocuments(): Promise<APIDocument[]> {
+        const response = await api.get<APIDocument[]>('/api/documents')
         return response.data
     },
 
-    async getDocument(id: string): Promise<Document> {
-        const response = await api.get<Document>(`/api/documents/${id}`)
+    async getDocument(id: string): Promise<APIDocument> {
+        const response = await api.get<APIDocument>(`/api/documents/${id}`)
         return response.data
     },
 
@@ -126,4 +136,5 @@ export const documentService = {
     }
 }
 
-export type { Document, CreateDocumentDTO, UpdateDocumentDTO }
+export { documentService }
+export type { APIDocument as Document }

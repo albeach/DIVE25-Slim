@@ -1,25 +1,12 @@
 // /frontend/src/components/DocumentViewer.tsx
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { documentService } from '@/services/api';
+import { documentService, type Document } from '@/services/api';
 
 interface DocumentViewerProps {
     documentId: string;
-}
-
-interface Document {
-    _id: string;
-    title: string;
-    content: string;
-    clearance: string;
-    releasableTo: string[];
-    coiTags?: string[];
-    metadata: {
-        createdAt: string;
-        createdBy: string;
-        lastModified: string;
-        version: number;
-    };
 }
 
 export const DocumentViewer = ({ documentId }: DocumentViewerProps) => {

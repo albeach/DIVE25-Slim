@@ -3,6 +3,25 @@ import { Request, Response, NextFunction } from 'express';
 import { LoggerService } from '../services/LoggerService';
 import { MetricsService } from '../services/MetricsService';
 
+interface ErrorResponse {
+    message: string;
+    status: number;
+    code: string;
+    details?: any;
+}
+
+class ApplicationError extends Error {
+    constructor(
+        public message: string,
+        public statusCode: number,
+        public code: string,
+        public details?: any
+    ) {
+        super(message);
+        this.name = 'ApplicationError';
+    }
+}
+
 export class ErrorHandler {
     private static instance: ErrorHandler;
     private readonly logger: LoggerService;
@@ -20,60 +39,70 @@ export class ErrorHandler {
         return ErrorHandler.instance;
     }
 
-    public handleError = (
-        error: any,
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): void => {
+    public handleError(error: any, req: Request, res: Response, next: NextFunction): void {
         const errorResponse = this.createErrorResponse(error);
 
-        // Log error
-        this.logger.error('Application error:', {
+        // Log error details
+        this.logger.error('Request error:', {
             error: errorResponse,
             path: req.path,
             method: req.method,
             requestId: req.headers['x-request-id']
         });
 
-        // Record metric
-        this.metrics.recordApiError(req.method, req.path, errorResponse.code);
+        // Record error metrics
+        this.metrics.recordError(errorResponse.code, errorResponse.status);
 
-        // Send response
-        res.status(errorResponse.status).json({
-            error: errorResponse.message,
-            code: errorResponse.code
-        });
-    };
+        res.status(errorResponse.status).json(errorResponse);
+    }
 
-    private createErrorResponse(error: any): {
-        message: string;
-        status: number;
-        code: string;
-    } {
-        // Handle known error types
-        if (error.name === 'UnauthorizedError') {
+    private createErrorResponse(error: any): ErrorResponse {
+        if (error instanceof ApplicationError) {
             return {
-                message: 'Authentication required',
-                status: 401,
-                code: 'AUTH001'
+                message: error.message,
+                status: error.statusCode,
+                code: error.code,
+                details: error.details
             };
         }
 
-        if (error.name === 'ValidationError') {
-            return {
-                message: 'Invalid request data',
-                status: 400,
-                code: 'VAL001'
-            };
-        }
-
-        if (error.name === 'DocumentNotFoundError') {
-            return {
-                message: 'Document not found',
-                status: 404,
-                code: 'DOC001'
-            };
+        // Handle specific error types
+        switch (error.name) {
+            case 'TokenExpiredError':
+                return {
+                    message: 'Authentication token expired',
+                    status: 401,
+                    code: 'AUTH003'
+                };
+            case 'JsonWebTokenError':
+                return {
+                    message: 'Invalid authentication token',
+                    status: 401,
+                    code: 'AUTH004'
+                };
+            case 'MongoError':
+                if (error.code === 11000) {
+                    return {
+                        message: 'Duplicate entry found',
+                        status: 409,
+                        code: 'DB001'
+                    };
+                }
+                break;
+            case 'ValidationError':
+                return {
+                    message: 'Validation failed',
+                    status: 400,
+                    code: 'VAL001',
+                    details: error.details
+                };
+            case 'OPAError':
+                return {
+                    message: 'Access policy evaluation failed',
+                    status: 403,
+                    code: 'OPA001',
+                    details: error.details
+                };
         }
 
         // Default error response
@@ -85,4 +114,5 @@ export class ErrorHandler {
     }
 }
 
-export const errorHandler = ErrorHandler.getInstance().handleError;
+export const errorHandler = ErrorHandler.getInstance();
+export { ApplicationError };

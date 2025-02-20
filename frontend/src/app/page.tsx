@@ -1,63 +1,54 @@
-// /frontend/src/app/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
+import { documentService } from '@/services/api'
+import { DocumentList } from '@/components/DocumentList'
+import type { Document } from '@/services/api'
 
-export default function Home() {
-  const router = useRouter()
-  const { isAuthenticated, loading: authLoading, login } = useAuth()
+export default function DocumentsPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth()
+  const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!authLoading) {
+    async function loadDocuments() {
       if (isAuthenticated) {
-        router.push('/documents')
+        try {
+          const docs = await documentService.getDocuments()
+          setDocuments(docs)
+        } catch (error) {
+          console.error('Failed to load documents:', error)
+        } finally {
+          setLoading(false)
+        }
       }
-      setLoading(false)
     }
-  }, [isAuthenticated, authLoading, router])
 
-  if (loading || authLoading) {
+    loadDocuments()
+  }, [isAuthenticated])
+
+  if (authLoading || loading) {
     return (
-      <main style={{ 
-        padding: '2rem',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh'
-      }}>
-        <p>Loading...</p>
-      </main>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2">Loading...</p>
+        </div>
+      </div>
     )
   }
 
-  return (
-    <main style={{ 
-      padding: '2rem',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh'
-    }}>
-      <h1 style={{ marginBottom: '1rem' }}>DIVE25</h1>
-      <p style={{ marginBottom: '2rem' }}>Welcome to DIVE25</p>
-      <button
-        onClick={login}
-        style={{
-          padding: '0.5rem 1rem',
-          backgroundColor: '#0070f3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Login
-      </button>
-    </main>
-  );
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
+          <p className="mt-2 text-gray-600">Please log in to view documents.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <DocumentList />
 }

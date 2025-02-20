@@ -9,6 +9,11 @@ interface User {
   email?: string;
   name?: string;
   preferred_username?: string;
+  securityAttributes?: {
+    clearance: string;
+    releasableTo?: string[];
+    coiAccess?: string[];
+  };
 }
 
 interface AuthContextType {
@@ -59,7 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sub: keycloak.tokenParsed.sub,
             email: keycloak.tokenParsed.email,
             name: keycloak.tokenParsed.name,
-            preferred_username: keycloak.tokenParsed.preferred_username
+            preferred_username: keycloak.tokenParsed.preferred_username,
+            securityAttributes: {
+              clearance: keycloak.tokenParsed.clearance,
+              releasableTo: keycloak.tokenParsed.releasableTo,
+              coiAccess: keycloak.tokenParsed.coiAccess
+            }
           })
           if (keycloak.token) {
             setToken(keycloak.token)

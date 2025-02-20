@@ -1,25 +1,29 @@
 // /backend/src/app.ts
-import express from 'express';
+import express, { Application } from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
-import { securityHeaders } from './middleware/securityHeaders';
-import { errorHandler } from './middleware/errorHandler';
-import { documentRoutes } from './routes/documentRoutes';
-import { healthRoutes } from './routes/healthRoutes';
-import { MetricsService } from './services/MetricsService';
+import { v4 as uuid } from 'uuid';
 import { LoggerService } from './services/LoggerService';
+import { MetricsService } from './services/MetricsService';
+import { securityHeaders } from './middleware/SecurityHeaders';
+import { requestSanitizer } from './middleware/RequestSanitizer';
+import { rateLimiter } from './middleware/RateLimiter';
+import { errorHandler } from './middleware/ErrorHandler';
+import { documentRoutes } from './routes/DocumentRoutes';
 
 export class App {
     private static instance: App;
-    private readonly app: express.Application;
-    private readonly metrics: MetricsService;
+    private readonly app: Application;
     private readonly logger: LoggerService;
+    private readonly metrics: MetricsService;
 
     private constructor() {
         this.app = express();
-        this.metrics = MetricsService.getInstance();
         this.logger = LoggerService.getInstance();
+        this.metrics = MetricsService.getInstance();
         this.initializeMiddleware();
         this.initializeRoutes();
+        this.initializeErrorHandling();
     }
 
     public static getInstance(): App {
@@ -31,36 +35,86 @@ export class App {
 
     private initializeMiddleware(): void {
         // Basic middleware
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(express.json({ limit: '1mb' }));
+        this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-        // Security
+        // Security middleware
+        this.app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    styleSrc: ["'self'", "'unsafe-inline'"],
+                    imgSrc: ["'self'", 'data:', 'https:'],
+                    connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3000']
+                }
+            }
+        }));
+
         this.app.use(cors({
             origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-            credentials: true
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id']
         }));
-        this.app.use(securityHeaders);
 
-        // Monitoring
+        this.app.use(securityHeaders);
+        this.app.use(requestSanitizer.sanitizeRequest);
+
+        // Rate limiting
+        this.app.use('/api/documents', rateLimiter.getDocumentLimiter());
+        this.app.use('/api/auth', rateLimiter.getAuthLimiter());
+
+        // Request tracking
         this.app.use((req, res, next) => {
+            const requestId = uuid();
+            req.headers['x-request-id'] = requestId;
+
             const startTime = Date.now();
             res.on('finish', () => {
                 const duration = Date.now() - startTime;
-                this.metrics.recordResponseTime(req.method, req.path, duration);
+                const path = req.baseUrl + req.path;
+
+                // Record metrics
+                this.metrics.recordResponseTime(req.method, path, duration);
+                if (res.statusCode >= 400) {
+                    this.metrics.recordError(path, res.statusCode);
+                }
+
+                // Log request details
+                this.logger.info('Request completed', {
+                    requestId,
+                    method: req.method,
+                    path,
+                    status: res.statusCode,
+                    duration,
+                    userAgent: req.headers['user-agent'],
+                    ip: req.ip,
+                    auth: req.headers.authorization ? 'present' : 'none'
+                });
             });
+
+            // Add request context
+            res.locals.requestId = requestId;
+            res.locals.startTime = startTime;
+
             next();
         });
     }
 
     private initializeRoutes(): void {
-        this.app.use('/api/health', healthRoutes.getRouter());
         this.app.use('/api/documents', documentRoutes.getRouter());
-
-        // Error handling should be last
-        this.app.use(errorHandler);
+        // Add health check endpoint
+        this.app.get('/health', (req, res) => {
+            res.json({ status: 'healthy' });
+        });
     }
 
-    public getApp(): express.Application {
+    private initializeErrorHandling(): void {
+        this.app.use(errorHandler.handleError);
+    }
+
+    public getApp(): Application {
         return this.app;
     }
 }
