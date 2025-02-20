@@ -20,8 +20,8 @@ generate_random_string() {
 
 # Ensure required environment variables are set
 required_vars=(
-  "MONGO_ROOT_USER"
-  "MONGO_ROOT_PASSWORD"
+  "MONGO_INITDB_ROOT_USERNAME"
+  "MONGO_INITDB_ROOT_PASSWORD"
   "KEYCLOAK_ADMIN_PASSWORD"
   "KEYCLOAK_DB_PASSWORD"
   "GRAFANA_ADMIN_PASSWORD"
@@ -29,9 +29,10 @@ required_vars=(
 
 for var in "${required_vars[@]}"; do
   if [ -z "${!var}" ]; then
-    export $var=$(generate_random_string 12)
+    value=$(generate_random_string 12)
+    export $var=$value
     echo "$var was not set. Generated random value."
-    echo "$var=${!var}" >> .env.production
+    echo "$var=$value" >> .env.production
   fi
 done
 
