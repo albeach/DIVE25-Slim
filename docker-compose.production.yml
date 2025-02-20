@@ -11,7 +11,7 @@ nginx:
       - frontend
     networks:
       - dive25-net
-
+      
 # docker-compose.production.yml additions
 
   kong:

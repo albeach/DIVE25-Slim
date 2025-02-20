@@ -8,8 +8,13 @@ set -e
 if [ -f .env.production ]; then
   source .env.production
 else
-  echo "Error: .env.production file not found"
-  exit 1
+  if [ -f .env.template ]; then
+    cp .env.template .env.production
+    echo "Created .env.production from template"
+  else
+    echo "Error: .env.template file not found"
+    exit 1
+  fi
 fi
 
 # Function to generate a random alphanumeric string (no special characters)
@@ -27,32 +32,29 @@ required_vars=(
   "GRAFANA_ADMIN_PASSWORD"
 )
 
+# Check and update both environment and .env.production file
+env_updated=false
 for var in "${required_vars[@]}"; do
   if [ -z "${!var}" ]; then
     value=$(generate_random_string 12)
     export $var=$value
     echo "$var was not set. Generated random value."
-    echo "$var=$value" >> .env.production
+    if grep -q "^${var}=" .env.production; then
+        sed -i.bak "s/^${var}=.*/${var}=${value}/" .env.production
+    else
+        echo "${var}=${value}" >> .env.production
+    fi
+    env_updated=true
   fi
 done
 
-# Check required tools
-command -v docker >/dev/null 2>&1 || { echo "Docker is required but not installed. Aborting." >&2; exit 1; }
-command -v docker-compose >/dev/null 2>&1 || { echo "Docker Compose is required but not installed. Aborting." >&2; exit 1; }
-
-# Check if Dockerfiles exist
-if [ ! -f "backend/Dockerfile" ]; then
-    echo "Error: backend/Dockerfile not found"
-    exit 1
+if [ "$env_updated" = true ]; then
+    echo "Environment variables were updated. Restarting services..."
+    docker-compose down
+    source .env.production
+else
+    docker-compose down
 fi
-
-if [ ! -f "frontend/Dockerfile" ]; then
-    echo "Error: frontend/Dockerfile not found"
-    exit 1
-fi
-
-# Bring down existing services
-docker-compose down
 
 # Pull latest images
 docker-compose pull
@@ -148,5 +150,46 @@ check_health() {
 # Check health of services
 check_health "API" "http://localhost:3000/health"
 check_health "Frontend" "http://localhost:3001"
+
+# After environment variables setup and before starting services
+
+# Setup Kong configuration with verification
+setup_kong_config() {
+    echo "Setting up Kong configuration..."
+    
+    # Create Kong directory with proper permissions
+    mkdir -p kong/declarative
+    
+    # Copy existing Kong configuration
+    if [ -f "config/kong/declarative/kong.yml" ]; then
+        cp config/kong/declarative/kong.yml kong/declarative/kong.yml
+        echo "Copied Kong configuration from config directory"
+    fi
+
+    # Verify Kong configuration exists
+    if [ ! -f "kong/declarative/kong.yml" ]; then
+        echo "Error: Kong configuration not found"
+        exit 1
+    fi
+
+    # Set permissions
+    chmod 644 kong/declarative/kong.yml
+    
+    echo "Kong configuration is ready"
+}
+
+# Call setup function before starting Kong
+setup_kong_config
+
+# Start Kong with proper volume mount verification
+echo "Starting Kong..."
+docker-compose up -d kong
+
+# Verify Kong configuration is accessible
+docker-compose exec kong cat /usr/local/kong/declarative/kong.yml > /dev/null 2>&1 || {
+    echo "Error: Kong configuration not properly mounted"
+    docker-compose logs kong
+    exit 1
+}
 
 echo "Deployment completed successfully"
