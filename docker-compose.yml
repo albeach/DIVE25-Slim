@@ -66,11 +66,17 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      - NEXT_PUBLIC_API_URL=http://api:3000
-      - NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
     ports:
-      - "3001:3000"
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: sh -c "npm install && npm run dev"
     depends_on:
       - api
     networks:
@@ -148,6 +154,52 @@ services:
     networks:
       - dive25-net
 
+  openldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: "DIVE25"
+      LDAP_DOMAIN: "dive25.local"
+      LDAP_BASE_DN: "dc=dive25,dc=local"
+      LDAP_ADMIN_PASSWORD: "${LDAP_ADMIN_PASSWORD}"
+      LDAP_CONFIG_PASSWORD: "${LDAP_CONFIG_PASSWORD}"
+      LDAP_READONLY_USER: "true"
+      LDAP_READONLY_USER_USERNAME: "readonly"
+      LDAP_READONLY_USER_PASSWORD: "${LDAP_READONLY_PASSWORD}"
+      LDAP_TLS: "false"
+    volumes:
+      - ./config/openldap/schema:/bootstrap/schema
+      - ./config/openldap/ldif:/bootstrap/ldif
+      - openldap_data:/var/lib/ldap
+      - openldap_config:/etc/ldap/slapd.d
+    command: --copy-service
+    networks:
+      - dive25-net
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "8444:443"
+    depends_on:
+      - openldap
+    networks:
+      - dive25-net
+
+  ldap-exporter:
+    build:
+      context: ./monitoring/ldap-exporter
+      dockerfile: Dockerfile
+    environment:
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
+    ports:
+      - "9330:9330"
+    depends_on:
+      - openldap
+    networks:
+      - dive25-net
+
 networks:
   dive25-net:
     driver: bridge
@@ -158,3 +210,5 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  openldap_data:
+  openldap_config:

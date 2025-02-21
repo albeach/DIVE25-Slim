@@ -1,0 +1,36 @@
+dn: cn=nato,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: nato
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.1.1.1 
+ NAME 'natoClearance'
+ DESC 'NATO Security Clearance Level'
+ EQUALITY caseIgnoreMatch
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+ SINGLE-VALUE )
+
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.1.1.2
+ NAME 'natoReleasableTo'
+ DESC 'NATO Releasability Markers'
+ EQUALITY caseIgnoreMatch
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.1.1.3
+ NAME 'natoCoi'
+ DESC 'NATO Communities of Interest'
+ EQUALITY caseIgnoreMatch
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.1.1.4
+ NAME 'natoLacv'
+ DESC 'NATO LACV Code'
+ EQUALITY caseIgnoreMatch
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+ SINGLE-VALUE )
+
+olcObjectClasses: ( 1.3.6.1.4.1.99999.1.2.1
+ NAME 'natoPerson'
+ DESC 'NATO Person with Security Attributes'
+ SUP inetOrgPerson
+ STRUCTURAL
+ MUST ( natoClearance )
+ MAY ( natoReleasableTo $ natoCoi $ natoLacv ) )

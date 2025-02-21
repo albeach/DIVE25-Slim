@@ -1,0 +1,29 @@
+groups:
+  - name: ldap_alerts
+    rules:
+      - alert: LDAPDown
+        expr: ldap_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LDAP server is down"
+          description: "LDAP server has been down for more than 1 minute."
+
+      - alert: HighLDAPConnections
+        expr: ldap_connections_total > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of LDAP connections"
+          description: "LDAP server has more than 100 active connections for 5 minutes."
+
+      - alert: HighLDAPOperationRate
+        expr: rate(ldap_operations_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LDAP operation rate"
+          description: "LDAP server is processing more than 50 operations per second." 

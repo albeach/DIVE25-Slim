@@ -1,0 +1,26 @@
+# Base Organization
+dn: dc=dive25,dc=local
+objectClass: dcObject
+objectClass: organization
+dc: dive25
+o: DIVE25 Federation
+
+# Users Organization Unit
+dn: ou=users,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: users
+
+# Groups Organization Unit
+dn: ou=groups,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+# Security Groups
+dn: ou=security,ou=groups,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: security
+
+# COI Groups
+dn: ou=coi,ou=groups,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: coi

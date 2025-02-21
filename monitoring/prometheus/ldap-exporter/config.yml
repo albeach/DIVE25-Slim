@@ -1,0 +1,25 @@
+# /monitoring/prometheus/ldap-exporter/config.yml
+ldap:
+  uri: "ldap://openldap:389"
+  bind_dn: "cn=readonly,dc=dive25,dc=local"
+  bind_password: "${LDAP_READONLY_PASSWORD}"
+  metrics:
+    - name: ldap_up
+      help: Whether scraping LDAP metrics was successful
+      type: gauge
+    - name: ldap_connections_total
+      help: Current number of LDAP connections
+      type: gauge
+    - name: ldap_operations_total
+      help: Total number of LDAP operations
+      labels: [operation]
+      type: counter
+    - name: ldap_search_operations_total
+      help: Total number of LDAP search operations
+      type: counter
+    - name: ldap_bind_operations_total
+      help: Total number of LDAP bind operations
+      type: counter
+    - name: ldap_unbind_operations_total
+      help: Total number of LDAP unbind operations
+      type: counter

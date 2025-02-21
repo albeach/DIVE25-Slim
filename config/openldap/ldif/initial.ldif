@@ -1,0 +1,55 @@
+# Base structure
+dn: dc=dive25,dc=local
+objectClass: dcObject
+objectClass: organization
+dc: dive25
+o: DIVE25
+
+# Organizational Units
+dn: ou=users,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+# Security Groups
+dn: cn=administrators,ou=groups,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: administrators
+member: cn=admin,dc=dive25,dc=local
+
+dn: cn=users,ou=groups,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: users
+member: cn=readonly,dc=dive25,dc=local
+
+# Clearance Levels
+dn: ou=clearances,dc=dive25,dc=local
+objectClass: organizationalUnit
+ou: clearances
+
+dn: cn=ts,ou=clearances,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: ts
+description: Top Secret
+member: cn=admin,dc=dive25,dc=local
+
+dn: cn=s,ou=clearances,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: s
+description: Secret
+member: cn=admin,dc=dive25,dc=local
+
+dn: cn=c,ou=clearances,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: c
+description: Confidential
+member: cn=admin,dc=dive25,dc=local
+
+dn: cn=u,ou=clearances,dc=dive25,dc=local
+objectClass: groupOfNames
+cn: u
+description: Unclassified
+member: cn=readonly,dc=dive25,dc=local 

@@ -1,0 +1,81 @@
+{
+    "id": "dive25-ldap",
+    "name": "dive25-ldap",
+    "providerId": "ldap",
+    "providerType": "org.keycloak.storage.UserStorageProvider",
+    "parentId": "dive25",
+    "config": {
+        "enabled": [
+            "true"
+        ],
+        "priority": [
+            "0"
+        ],
+        "editMode": [
+            "READ_ONLY"
+        ],
+        "syncRegistrations": [
+            "false"
+        ],
+        "vendor": [
+            "other"
+        ],
+        "usernameLDAPAttribute": [
+            "uid"
+        ],
+        "rdnLDAPAttribute": [
+            "uid"
+        ],
+        "uuidLDAPAttribute": [
+            "entryUUID"
+        ],
+        "userObjectClasses": [
+            "natoPerson"
+        ],
+        "connectionUrl": [
+            "ldap://openldap:389"
+        ],
+        "usersDn": [
+            "ou=users,dc=dive25,dc=local"
+        ],
+        "authType": [
+            "simple"
+        ],
+        "bindDn": [
+            "cn=readonly,dc=dive25,dc=local"
+        ],
+        "bindCredential": [
+            "${LDAP_READONLY_PASSWORD}"
+        ],
+        "searchScope": [
+            "1"
+        ],
+        "useTruststoreSpi": [
+            "never"
+        ],
+        "connectionPooling": [
+            "true"
+        ],
+        "pagination": [
+            "true"
+        ],
+        "allowKerberosAuthentication": [
+            "false"
+        ],
+        "batchSizeForSync": [
+            "1000"
+        ],
+        "fullSyncPeriod": [
+            "-1"
+        ],
+        "changedSyncPeriod": [
+            "-1"
+        ],
+        "debug": [
+            "false"
+        ],
+        "importEnabled": [
+            "true"
+        ]
+    }
+}

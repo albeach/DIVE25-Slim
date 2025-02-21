@@ -1,0 +1,16 @@
+# Sample NATO User
+dn: uid=jdoe,ou=users,dc=dive25,dc=local
+objectClass: natoPerson
+objectClass: inetOrgPerson
+uid: jdoe
+sn: Doe
+givenName: John
+cn: John Doe
+mail: jdoe@dive25.local
+userPassword: {SSHA}changeme
+natoClearance: NATO SECRET
+natoReleasableTo: NATO
+natoReleasableTo: FVEY
+natoCoi: OpAlpha
+natoCoi: MissionX
+natoLacv: LACV001

@@ -56,15 +56,20 @@ else
     docker-compose down
 fi
 
-# Pull latest images
-docker-compose pull
+echo "Pulling Docker images..."
+docker-compose pull --ignore-pull-failures
 
-# Build services
-echo "Building services..."
-docker-compose build --no-cache api frontend || {
-    echo "Error: Build failed"
-    exit 1
-}
+echo "Building local images..."
+docker-compose build
+
+echo "Starting services..."
+docker-compose up -d
+
+echo "Waiting for services to be healthy..."
+sleep 10
+
+echo "Checking service health..."
+docker-compose ps
 
 # Enable debug output for curl
 export CURL_VERBOSE=1
