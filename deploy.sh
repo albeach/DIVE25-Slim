@@ -17,36 +17,24 @@ else
   fi
 fi
 
+# Source the environment setup script
+source ./scripts/setup-env.sh
+
+# Verify environment variables are set
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "Error: Required environment variable $var is not set"
+        exit 1
+    fi
+done
+
 # Function to generate a random alphanumeric string (no special characters)
 generate_random_string() {
   local length=${1:-12}
   tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$length"
 }
 
-# Ensure required environment variables are set
-required_vars=(
-  "MONGO_INITDB_ROOT_USERNAME"
-  "MONGO_INITDB_ROOT_PASSWORD"
-  "KEYCLOAK_ADMIN_PASSWORD"
-  "KEYCLOAK_DB_PASSWORD"
-  "GRAFANA_ADMIN_PASSWORD"
-)
 
-# Check and update both environment and .env.production file
-env_updated=false
-for var in "${required_vars[@]}"; do
-  if [ -z "${!var}" ]; then
-    value=$(generate_random_string 12)
-    export $var=$value
-    echo "$var was not set. Generated random value."
-    if grep -q "^${var}=" .env.production; then
-        sed -i.bak "s/^${var}=.*/${var}=${value}/" .env.production
-    else
-        echo "${var}=${value}" >> .env.production
-    fi
-    env_updated=true
-  fi
-done
 
 if [ "$env_updated" = true ]; then
     echo "Environment variables were updated. Restarting services..."
@@ -119,9 +107,43 @@ wait_for_keycloak() {
   return 1
 }
 
+# Add after the existing wait_for_keycloak function
+verify_keycloak_realm() {
+    echo "Verifying realm 'dive25' exists..."
+    # Get admin token
+    TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+        -d "client_id=admin-cli" \
+        -d "username=admin" \
+        -d "password=admin" \
+        -d "grant_type=password" | jq -r '.access_token')
+
+    if [ -z "$TOKEN" ]; then
+        echo "Failed to get admin token"
+        return 1
+    fi
+
+    response=$(curl -s -X GET \
+        -H "Authorization: Bearer $TOKEN" \
+        "http://localhost:8080/admin/realms/dive25")
+    
+    if [[ $response != *"error"* ]]; then
+        echo "Realm verification successful!"
+        return 0
+    else
+        echo "Realm verification failed!"
+        return 1
+    fi
+}
+
 # Wait for Keycloak
 if ! wait_for_keycloak; then
   echo "Failed to start Keycloak. Exiting."
+  exit 1
+fi
+
+# Add realm verification
+if ! verify_keycloak_realm; then
+  echo "Failed to verify Keycloak realm. Exiting."
   exit 1
 fi
 

@@ -1,5 +1,5 @@
-// config/keycloak/realm-export.json
 {
+    "id": "dive25",
     "realm": "dive25",
     "enabled": true,
     "sslRequired": "external",
@@ -52,7 +52,9 @@
                 "user"
             ],
             "attributes": {
-                "clearance": "TOP_SECRET"
+                "clearance": [
+                    "TOP_SECRET"
+                ]
             }
         },
         {
@@ -73,7 +75,9 @@
                 "user"
             ],
             "attributes": {
-                "clearance": "TOP_SECRET"
+                "clearance": [
+                    "TOP_SECRET"
+                ]
             }
         }
     ],

@@ -1,33 +1,22 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with clean npm cache
+RUN npm cache clean --force && \
+    npm install
 
-# Copy source code
+# Copy the rest of the application
 COPY . .
+
+# Install additional required packages
+RUN npm install @swc/helpers react-dom axios
 
 # Build the application
 RUN npm run build
 
-# Production image
-FROM node:18-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV production
-
-# Copy necessary files from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"]
+# Start the application
+CMD ["npm", "run", "dev"]

@@ -20,20 +20,30 @@ services:
       - dive25-net
 
   keycloak:
-    image: quay.io/keycloak/keycloak:22.0
-    command: start-dev
+    image: quay.io/keycloak/keycloak:latest
+    command:
+      - start-dev
+      - --import-realm
+      - --db=postgres
+      - --db-url=jdbc:postgresql://postgres:5432/keycloak
+      - --db-username=keycloak
+      - --db-password=${KEYCLOAK_DB_PASSWORD}
+      - --http-enabled=true
+      - --http-port=8080
+      - --proxy-headers=forwarded
+      - --hostname-strict=false
+      - --hostname=localhost
     environment:
       - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
-      - KC_DB_USERNAME=keycloak
-      - KC_DB_PASSWORD=keycloak
-      - KC_HOSTNAME=localhost
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+    volumes:
+      - ./config/keycloak/dive25-realm.json:/opt/keycloak/data/import/dive25-realm.json:ro
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - dive25-net
     healthcheck:
@@ -47,13 +57,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - METRICS_PORT=9100
       - MONGODB_URI=mongodb://mongodb:27017/dive25
       - REDIS_HOST=redis
       - OPA_URL=http://opa:8181
       - KEYCLOAK_URL=http://keycloak:8080
     ports:
       - "3000:3000"
+      - "9100:9100"
     depends_on:
       - mongodb
       - redis
@@ -61,24 +73,29 @@ services:
       - keycloak
     networks:
       - dive25-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "3002:3000"
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
-      - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
+      - NEXT_PUBLIC_KEYCLOAK_REALM=dive25
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=dive25-frontend
+    ports:
+      - "3002:3000"
     command: sh -c "npm install && npm run dev"
-    depends_on:
-      - api
     networks:
       - dive25-net
 
@@ -86,6 +103,7 @@ services:
     image: mongo:5
     volumes:
       - mongodb_data:/data/db
+      - ./config/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
@@ -100,7 +118,7 @@ services:
       - dive25-net
 
   opa:
-    image: openpolicyagent/opa:latest
+    image: openpolicyagent/opa:latest-envoy-static
     ports:
       - "8181:8181"
     command:
@@ -115,13 +133,25 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_DB=keycloak
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - KEYCLOAK_DB_NAME=keycloak
+      - KEYCLOAK_DB_USER=keycloak
+      - KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init-keycloak-db.sh:/docker-entrypoint-initdb.d/init-keycloak-db.sh:ro
+      - ./config/postgres/init-users.sql:/docker-entrypoint-initdb.d/init-users.sql:ro
+      - ./config/postgres/init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
     networks:
       - dive25-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 # Update docker-compose.yml to add monitoring services
   prometheus:
@@ -144,7 +174,7 @@ services:
     ports:
       - "3001:3000"
     volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -197,6 +227,11 @@ services:
       - "9330:9330"
     depends_on:
       - openldap
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9330/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - dive25-net
 
