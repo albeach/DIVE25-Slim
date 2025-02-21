@@ -34,30 +34,85 @@ generate_random_string() {
   tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$length"
 }
 
+# Function to generate a secure password
+generate_password() {
+    openssl rand -base64 24 | tr -d '/+=' | cut -c1-20
+}
 
+# Function to set env variable if not exists
+set_env_var() {
+    local var_name=$1
+    local current_value=$(grep "^${var_name}=" .env 2>/dev/null | cut -d '=' -f2)
+    
+    if [[ -z "$current_value" ]]; then
+        local new_value=$(generate_password)
+        echo "${var_name}=${new_value}" >> .env
+        echo "Generated ${var_name}"
+    else
+        echo "${var_name} already set"
+    fi
+}
 
-if [ "$env_updated" = true ]; then
-    echo "Environment variables were updated. Restarting services..."
-    docker-compose down
-    source .env.production
-else
-    docker-compose down
-fi
+# Create .env file if it doesn't exist
+touch .env
 
-echo "Pulling Docker images..."
-docker-compose pull --ignore-pull-failures
+# Required environment variables
+declare -a required_vars=(
+    "MONGO_INITDB_ROOT_USERNAME"
+    "MONGO_INITDB_ROOT_PASSWORD"
+    "KEYCLOAK_ADMIN"
+    "KEYCLOAK_ADMIN_PASSWORD"
+    "KEYCLOAK_DB_PASSWORD"
+    "KEYCLOAK_CLIENT_SECRET"
+    "JWT_SECRET"
+    "API_KEY"
+    "GRAFANA_ADMIN_PASSWORD"
+    "LDAP_ADMIN_PASSWORD"
+    "LDAP_CONFIG_PASSWORD"
+    "LDAP_READONLY_PASSWORD"
+    "POSTGRES_PASSWORD"
+)
 
-echo "Building local images..."
-docker-compose build
+# Default values for non-password variables
+echo "Setting default values for non-password variables..."
+grep -q "^KEYCLOAK_ADMIN=" .env || echo "KEYCLOAK_ADMIN=admin" >> .env
+grep -q "^NODE_ENV=" .env || echo "NODE_ENV=production" >> .env
+grep -q "^MONGODB_URI=" .env || echo "MONGODB_URI=mongodb://mongodb:27017/dive25" >> .env
+grep -q "^REDIS_HOST=" .env || echo "REDIS_HOST=redis" >> .env
+grep -q "^OPA_URL=" .env || echo "OPA_URL=http://opa:8181" >> .env
+grep -q "^KEYCLOAK_URL=" .env || echo "KEYCLOAK_URL=http://keycloak:8080" >> .env
+grep -q "^NEXT_PUBLIC_API_URL=" .env || echo "NEXT_PUBLIC_API_URL=http://api:3000" >> .env
+grep -q "^NEXT_PUBLIC_KEYCLOAK_URL=" .env || echo "NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080" >> .env
 
-echo "Starting services..."
+# Generate passwords for required variables
+echo "Checking and generating passwords for required variables..."
+for var in "${required_vars[@]}"; do
+    set_env_var "$var"
+done
+
+# Export all variables from .env
+echo "Exporting environment variables..."
+set -a
+source .env
+set +a
+
+echo "Environment setup complete. Proceeding with deployment..."
+
+# Start the services
+docker-compose down -v
+docker volume prune -f
+docker-compose build --no-cache
 docker-compose up -d
 
-echo "Waiting for services to be healthy..."
+# Wait for services to be ready
+echo "Waiting for services to start..."
 sleep 10
 
+# Check service health
 echo "Checking service health..."
 docker-compose ps
+
+echo "Deployment complete! Check the service status above."
 
 # Enable debug output for curl
 export CURL_VERBOSE=1
