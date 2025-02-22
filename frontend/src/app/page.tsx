@@ -1,54 +1,60 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { documentService } from '@/services/api'
-import { DocumentList } from '@/components/DocumentList'
-import type { Document } from '@/services/api'
+import keycloakService from '@/utils/keycloak'
 
-export default function DocumentsPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth()
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [loading, setLoading] = useState(true)
+export default function Home() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [username, setUsername] = useState<string | undefined>()
 
   useEffect(() => {
-    async function loadDocuments() {
-      if (isAuthenticated) {
-        try {
-          const docs = await documentService.getDocuments()
-          setDocuments(docs)
-        } catch (error) {
-          console.error('Failed to load documents:', error)
-        } finally {
-          setLoading(false)
-        }
-      }
+    const keycloak = keycloakService.getKeycloak()
+    if (keycloak?.authenticated) {
+      setUsername(keycloak.tokenParsed?.preferred_username)
     }
+    setIsLoading(false)
+  }, [])
 
-    loadDocuments()
-  }, [isAuthenticated])
-
-  if (authLoading || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2">Loading...</p>
-        </div>
-      </div>
-    )
+  const handleLogin = () => {
+    const keycloak = keycloakService.getKeycloak()
+    keycloak?.login()
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-          <p className="mt-2 text-gray-600">Please log in to view documents.</p>
-        </div>
-      </div>
-    )
+  const handleLogout = () => {
+    const keycloak = keycloakService.getKeycloak()
+    keycloak?.logout()
   }
 
-  return <DocumentList />
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  return (
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-4">DIVE25 Dashboard</h1>
+        {username ? (
+          <div>
+            <p>Welcome, {username}!</p>
+            <button
+              onClick={handleLogout}
+              className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Logout
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p>Please log in to continue</p>
+            <button
+              onClick={handleLogin}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Login
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

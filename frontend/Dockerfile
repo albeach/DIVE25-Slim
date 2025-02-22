@@ -12,9 +12,6 @@ RUN npm cache clean --force && \
 # Copy the rest of the application
 COPY . .
 
-# Install additional required packages
-RUN npm install @swc/helpers react-dom axios
-
 # Build the application
 RUN npm run build
 

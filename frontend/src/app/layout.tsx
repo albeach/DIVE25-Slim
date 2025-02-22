@@ -1,12 +1,11 @@
 // /frontend/src/app/layout.tsx
-import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import ClientProvider from '@/components/ClientProvider'
 import './globals.css'
-import { AuthProvider } from '@/contexts/AuthContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'DIVE25',
   description: 'DIVE25 Application',
 }
@@ -18,10 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+      <body className={inter.className}>
+        <ClientProvider>
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </ClientProvider>
       </body>
     </html>
   )

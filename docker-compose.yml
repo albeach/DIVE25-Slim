@@ -93,6 +93,7 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
       - NEXT_PUBLIC_KEYCLOAK_REALM=dive25
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=dive25-frontend
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
     ports:
       - "3002:3000"
     command: sh -c "npm install && npm run dev"
