@@ -20,8 +20,6 @@ TOKEN_RESPONSE=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/o
   -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
   -d "grant_type=password")
 
-echo "Token response: $TOKEN_RESPONSE"
-
 TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
 
 if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
@@ -35,15 +33,32 @@ echo "Successfully obtained admin token"
 echo "Configuring dive25-frontend client..."
 CLIENT_ID="dive25-frontend"
 
-# Check if client exists
-CLIENTS_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8080/admin/realms/dive25/clients")
+# Create test user in dive25 realm
+echo "Creating test user in dive25 realm..."
+USER_CONFIG='{
+  "username": "testuser",
+  "enabled": true,
+  "emailVerified": true,
+  "firstName": "Test",
+  "lastName": "User",
+  "email": "testuser@dive25.local",
+  "credentials": [{
+    "type": "password",
+    "value": "testpassword123",
+    "temporary": false
+  }],
+  "realmRoles": ["user"]
+}'
 
-echo "Clients response: $CLIENTS_RESPONSE"
+# Create user
+CREATE_USER_RESPONSE=$(curl -s -X POST "http://localhost:8080/admin/realms/dive25/users" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$USER_CONFIG")
 
-CLIENT_UUID=$(echo $CLIENTS_RESPONSE | jq -r '.[] | select(.clientId=="'$CLIENT_ID'") | .id')
+echo "User creation response: $CREATE_USER_RESPONSE"
 
-# Client configuration
+# Rest of your existing client configuration code...
 CLIENT_CONFIG='{
   "clientId": "'$CLIENT_ID'",
   "enabled": true,
@@ -52,16 +67,26 @@ CLIENT_CONFIG='{
   "implicitFlowEnabled": false,
   "directAccessGrantsEnabled": true,
   "serviceAccountsEnabled": false,
-  "redirectUris": ["http://localhost:3002/*"],
-  "webOrigins": ["http://localhost:3002"],
+  "redirectUris": [
+    "http://localhost:3002/*",
+    "http://localhost:3002/silent-check-sso.html"
+  ],
+  "webOrigins": ["+"],
   "rootUrl": "http://localhost:3002",
   "baseUrl": "/",
   "adminUrl": "http://localhost:3002",
   "protocol": "openid-connect",
   "attributes": {
-    "pkce.code.challenge.method": "S256"
+    "pkce.code.challenge.method": "S256",
+    "post.logout.redirect.uris": "http://localhost:3002/*"
   }
 }'
+
+# Check if client exists and update/create as before...
+CLIENTS_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/admin/realms/dive25/clients")
+
+CLIENT_UUID=$(echo $CLIENTS_RESPONSE | jq -r '.[] | select(.clientId=="'$CLIENT_ID'") | .id')
 
 if [ -n "$CLIENT_UUID" ]; then
     echo "Updating existing client with UUID: $CLIENT_UUID"
@@ -79,4 +104,8 @@ else
     echo "Create response: $CREATE_RESPONSE"
 fi
 
-echo "Keycloak client configuration complete!" 
+echo "Configuration complete!"
+echo ""
+echo "You can now log in with:"
+echo "Username: testuser"
+echo "Password: testpassword123" 

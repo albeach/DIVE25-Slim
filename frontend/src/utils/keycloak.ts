@@ -22,18 +22,23 @@ class KeycloakService {
             const keycloakConfig = {
                 url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8080',
                 realm: 'dive25',
-                clientId: 'dive25-frontend',
-                redirectUri: window.location.origin
+                clientId: 'dive25-frontend'
             };
 
             this.keycloak = new Keycloak(keycloakConfig);
-            await this.keycloak.init({
-                onLoad: 'login-required',
+
+            const authenticated = await this.keycloak.init({
+                onLoad: 'check-sso',
                 silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
                 pkceMethod: 'S256',
                 checkLoginIframe: false,
-                enableLogging: true
+                flow: 'standard'  // Use standard flow
             });
+
+            // Set up token refresh
+            if (authenticated) {
+                this.setupTokenRefresh();
+            }
 
             this.initialized = true;
             return this.keycloak;
@@ -43,8 +48,33 @@ class KeycloakService {
         }
     }
 
+    private setupTokenRefresh() {
+        if (!this.keycloak) return;
+
+        // Refresh token 1 minute before it expires
+        setInterval(() => {
+            this.keycloak?.updateToken(70)
+                .catch(() => {
+                    console.log('Failed to refresh token, logging out...');
+                    this.keycloak?.logout();
+                });
+        }, 60000);
+    }
+
     public getKeycloak(): KeycloakInstance | null {
         return this.keycloak;
+    }
+
+    public login(): void {
+        this.keycloak?.login({
+            redirectUri: window.location.origin
+        });
+    }
+
+    public logout(): void {
+        this.keycloak?.logout({
+            redirectUri: window.location.origin
+        });
     }
 }
 

@@ -4,6 +4,19 @@
 # Exit on error
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Logging function
+log() {
+    echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+}
+
 # Load environment variables
 if [ -f .env.production ]; then
   source .env.production
@@ -275,3 +288,51 @@ docker-compose exec kong cat /usr/local/kong/declarative/kong.yml > /dev/null 2>
 }
 
 echo "Deployment completed successfully"
+
+# Environment validation
+if [ -z "$NODE_ENV" ]; then
+    log "${YELLOW}NODE_ENV not set, defaulting to development${NC}"
+    export NODE_ENV=development
+fi
+
+# Validate docker-compose file exists
+COMPOSE_FILE="docker-compose.${NODE_ENV}.yml"
+if [ ! -f "$COMPOSE_FILE" ]; then
+    log "${RED}Error: Docker compose file '$COMPOSE_FILE' not found${NC}"
+    exit 1
+fi
+
+log "Starting deployment for ${NODE_ENV} environment"
+
+# Setup certificates
+log "${YELLOW}Setting up certificates...${NC}"
+if ! "${SCRIPT_DIR}/scripts/cert-manager.sh"; then
+    log "${RED}Certificate setup failed${NC}"
+    exit 1
+fi
+
+# Set Keycloak admin credentials if not already set
+if [ -z "$KC_BOOTSTRAP_ADMIN_USERNAME" ]; then
+    export KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
+fi
+
+if [ -z "$KC_BOOTSTRAP_ADMIN_PASSWORD" ]; then
+    export KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+fi
+
+# Start services
+log "${YELLOW}Starting services...${NC}"
+if ! docker-compose -f "$COMPOSE_FILE" up -d; then
+    log "${RED}Failed to start services${NC}"
+    exit 1
+fi
+
+# Verify deployment
+log "${YELLOW}Verifying deployment...${NC}"
+if ! "${SCRIPT_DIR}/scripts/deployment-verify.sh"; then
+    log "${RED}Deployment verification failed. Checking logs...${NC}"
+    docker-compose logs keycloak
+    exit 1
+fi
+
+log "${GREEN}Deployment completed successfully!${NC}"

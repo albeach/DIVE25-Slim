@@ -8,25 +8,36 @@ export default function Home() {
   const [username, setUsername] = useState<string | undefined>()
 
   useEffect(() => {
-    const keycloak = keycloakService.getKeycloak()
-    if (keycloak?.authenticated) {
-      setUsername(keycloak.tokenParsed?.preferred_username)
+    const initAuth = async () => {
+      try {
+        const keycloak = await keycloakService.initialize()
+        if (keycloak?.authenticated) {
+          setUsername(keycloak.tokenParsed?.preferred_username)
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+
+    initAuth()
   }, [])
 
   const handleLogin = () => {
-    const keycloak = keycloakService.getKeycloak()
-    keycloak?.login()
+    keycloakService.login()
   }
 
   const handleLogout = () => {
-    const keycloak = keycloakService.getKeycloak()
-    keycloak?.logout()
+    keycloakService.logout()
   }
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    )
   }
 
   return (
