@@ -140,67 +140,86 @@ docker-compose up -d keycloak
 
 # Function to check if Keycloak is ready
 wait_for_keycloak() {
-  local retries=30
-  local wait_seconds=10  # Increased wait time
-  local keycloak_url="http://localhost:8080/realms/master"  # Changed to a more reliable endpoint
-
-  echo "Checking Keycloak health..."
-  while [ $retries -gt 0 ]; do
-    echo "Attempting to connect to Keycloak... ($retries attempts left)"
+    local retries=30
+    local wait_seconds=10
     
-    # Show Keycloak logs
-    echo "Recent Keycloak logs:"
-    docker-compose logs --tail=20 keycloak
+    echo "Waiting for Keycloak to be ready..."
+    while [ $retries -gt 0 ]; do
+        echo "Attempting to connect to Keycloak... ($retries attempts left)"
+        
+        # First check if container is running
+        if ! docker-compose ps keycloak | grep -q "Up"; then
+            echo "Keycloak container is not running"
+            docker-compose logs --tail=20 keycloak
+            sleep $wait_seconds
+            retries=$((retries-1))
+            continue
+        fi
+        
+        # Try multiple health check endpoints since Keycloak's endpoints can vary
+        if curl -s -f "http://localhost:8080/health" > /dev/null || \
+           curl -s -f "http://localhost:8080/health/ready" > /dev/null || \
+           curl -s -f "http://localhost:8080/realms/master" > /dev/null; then
+            echo "Keycloak is responding to health checks"
+            
+            # Add additional delay to ensure realm import is complete
+            sleep 15
+            echo "Keycloak is ready!"
+            return 0
+        fi
+        
+        # If we've waited a few times, show the logs to help diagnose issues
+        if [ $retries -eq 25 ] || [ $retries -eq 15 ] || [ $retries -eq 5 ]; then
+            echo "Recent Keycloak logs:"
+            docker-compose logs --tail=50 keycloak
+        fi
+        
+        retries=$((retries-1))
+        echo "Waiting $wait_seconds seconds before next attempt..."
+        sleep $wait_seconds
+    done
     
-    # Check if container is running
-    container_status=$(docker-compose ps keycloak | grep "Up" || echo "not running")
-    echo "Keycloak container status: $container_status"
-    
-    # Try to connect to Keycloak
-    if curl -s -f "$keycloak_url" > /dev/null 2>&1; then
-      echo "Keycloak is ready!"
-      return 0
-    else
-      echo "Curl failed, Keycloak not ready yet"
-    fi
-    
-    retries=$((retries-1))
-    echo "Waiting $wait_seconds seconds before next attempt..."
-    sleep $wait_seconds
-  done
-  
-  echo "ERROR: Keycloak failed to become ready"
-  echo "Final Keycloak logs:"
-  docker-compose logs keycloak
-  return 1
+    echo "ERROR: Keycloak failed to become ready"
+    docker-compose logs keycloak
+    return 1
 }
 
 # Add after the existing wait_for_keycloak function
 verify_keycloak_realm() {
     echo "Verifying realm 'dive25' exists..."
-    # Get admin token
+    
+    # Get admin token using environment variables
     TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
         -d "client_id=admin-cli" \
-        -d "username=admin" \
-        -d "password=admin" \
-        -d "grant_type=password" | jq -r '.access_token')
+        -d "username=${KEYCLOAK_ADMIN}" \
+        -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+        -d "grant_type=password")
+    
+    ACCESS_TOKEN=$(echo $TOKEN | jq -r '.access_token')
 
-    if [ -z "$TOKEN" ]; then
-        echo "Failed to get admin token"
+    if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+        echo "Failed to get admin token. Response: $TOKEN"
         return 1
     fi
+
+    echo "Successfully obtained admin token"
+
+    # Add delay to ensure realm is fully imported
+    sleep 5
 
     response=$(curl -s -X GET \
-        -H "Authorization: Bearer $TOKEN" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
         "http://localhost:8080/admin/realms/dive25")
     
-    if [[ $response != *"error"* ]]; then
-        echo "Realm verification successful!"
-        return 0
-    else
-        echo "Realm verification failed!"
-        return 1
+    if echo "$response" | jq -e . >/dev/null 2>&1; then
+        if [[ $(echo "$response" | jq -r '.realm') == "dive25" ]]; then
+            echo "Realm verification successful!"
+            return 0
+        fi
     fi
+    
+    echo "Realm verification failed! Response: $response"
+    return 1
 }
 
 # Wait for Keycloak
