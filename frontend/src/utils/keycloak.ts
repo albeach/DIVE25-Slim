@@ -1,11 +1,9 @@
 import Keycloak, { KeycloakInstance } from 'keycloak-js';
 
 class KeycloakService {
-    private static instance: KeycloakService;
     private keycloak: KeycloakInstance | null = null;
     private initialized = false;
-
-    private constructor() { }
+    private static instance: KeycloakService;
 
     public static getInstance(): KeycloakService {
         if (!KeycloakService.instance) {
@@ -32,7 +30,7 @@ class KeycloakService {
                 silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
                 pkceMethod: 'S256',
                 checkLoginIframe: false,
-                flow: 'standard'  // Use standard flow
+                flow: 'standard'
             });
 
             // Set up token refresh
@@ -48,33 +46,32 @@ class KeycloakService {
         }
     }
 
-    private setupTokenRefresh() {
+    private setupTokenRefresh(): void {
         if (!this.keycloak) return;
 
-        // Refresh token 1 minute before it expires
-        setInterval(() => {
+        this.keycloak.onTokenExpired = () => {
             this.keycloak?.updateToken(70)
                 .catch(() => {
-                    console.log('Failed to refresh token, logging out...');
-                    this.keycloak?.logout();
+                    console.warn('Failed to refresh token, logging out...');
+                    this.logout();
                 });
-        }, 60000);
+        };
     }
 
-    public getKeycloak(): KeycloakInstance | null {
-        return this.keycloak;
+    public async login(): Promise<void> {
+        await this.keycloak?.login({
+            redirectUri: window.location.origin + '/api-docs'
+        });
     }
 
-    public login(): void {
-        this.keycloak?.login({
+    public async logout(): Promise<void> {
+        await this.keycloak?.logout({
             redirectUri: window.location.origin
         });
     }
 
-    public logout(): void {
-        this.keycloak?.logout({
-            redirectUri: window.location.origin
-        });
+    public getToken(): string | undefined {
+        return this.keycloak?.token;
     }
 }
 
