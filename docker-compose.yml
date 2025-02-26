@@ -12,8 +12,8 @@ services:
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
       KONG_LOG_LEVEL: debug
     ports:
-      - "8000:8000"
-      - "8443:8443"
+      - "80:8000"
+      - "443:8443"
     volumes:
       - ./config/kong/declarative:/usr/local/kong/declarative:ro
     networks:
@@ -30,13 +30,19 @@ services:
       - --db-password=${KEYCLOAK_DB_PASSWORD}
       - --http-enabled=true
       - --http-port=8080
-      - --proxy-headers=forwarded
+      - --proxy=edge
       - --hostname-strict=false
-      - --hostname=localhost
+      - --hostname-strict-https=false
+      - --spi-x509cert-lookup-provider=nginx
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KC_PROXY_ADDRESS_FORWARDING=true
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_HEALTH_ENABLED=true
+      - KC_HTTP_CONNECTION_TIMEOUT=5000
+      - KC_HTTP_READ_TIMEOUT=60000
     volumes:
       - ./config/keycloak/dive25-realm.json:/opt/keycloak/data/import/dive25-realm.json:ro
     ports:
@@ -51,6 +57,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   api:
     build:
