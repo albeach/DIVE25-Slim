@@ -16,6 +16,17 @@ jobs:
         image: mongo:5
         ports:
           - 27017:27017
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+    env:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://localhost:27017/dive25_test
+      REDIS_HOST: localhost
+      JWT_SECRET: test_secret
+      API_KEY: test_key
 
     steps:
       - uses: actions/checkout@v3
@@ -24,57 +35,25 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
           
-      - name: Install Dependencies
-        run: |
-          cd backend
-          npm ci
-          cd ../frontend
-          npm ci
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+          
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
           
       - name: Run Backend Tests
-        run: |
-          cd backend
-          npm test
+        working-directory: backend
+        run: npm test
           
       - name: Run Frontend Tests
-        run: |
-          cd frontend
-          npm test
+        working-directory: frontend
+        run: npm test
 
-  deploy-staging:
-    needs: test
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-          
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        
-      - name: Build and push Docker images
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          docker-compose -f docker-compose.staging.yml build
-          docker-compose -f docker-compose.staging.yml push
-
-      - name: Deploy to staging
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig
-          export KUBECONFIG=./kubeconfig
-          kubectl apply -f k8s/staging/
-
-  deploy-production:
+  deploy:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -83,15 +62,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Deploy to Production
+        uses: appleboy/ssh-action@master
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-          
-      - name: Build and deploy
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig
-          export KUBECONFIG=./kubeconfig
-          kubectl apply -f k8s/production/
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /opt/dive25
+            git pull
+            docker-compose -f docker-compose.production.yml pull
+            docker-compose -f docker-compose.production.yml up -d
