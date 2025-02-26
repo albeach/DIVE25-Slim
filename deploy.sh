@@ -157,8 +157,9 @@ wait_for_keycloak() {
         fi
         
         # Try multiple health check endpoints since Keycloak's endpoints can vary
-        if curl -s -f "http://localhost:8080/health" > /dev/null || \
+        if curl -s -f "http://localhost:8080/auth/health/ready" > /dev/null || \
            curl -s -f "http://localhost:8080/health/ready" > /dev/null || \
+           curl -s -f "http://localhost:8080/auth/realms/master" > /dev/null || \
            curl -s -f "http://localhost:8080/realms/master" > /dev/null; then
             echo "Keycloak is responding to health checks"
             
@@ -189,11 +190,21 @@ verify_keycloak_realm() {
     echo "Verifying realm 'dive25' exists..."
     
     # Get admin token using environment variables
-    TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+    TOKEN=$(curl -s -X POST "http://localhost:8080/auth/realms/master/protocol/openid-connect/token" \
         -d "client_id=admin-cli" \
         -d "username=${KEYCLOAK_ADMIN}" \
         -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
         -d "grant_type=password")
+    
+    # If the first attempt fails, try without the /auth prefix
+    if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ] || [[ "$TOKEN" == *"error"* ]]; then
+        echo "Trying alternate token endpoint..."
+        TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+            -d "client_id=admin-cli" \
+            -d "username=${KEYCLOAK_ADMIN}" \
+            -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+            -d "grant_type=password")
+    fi
     
     ACCESS_TOKEN=$(echo $TOKEN | jq -r '.access_token')
 
@@ -207,9 +218,17 @@ verify_keycloak_realm() {
     # Add delay to ensure realm is fully imported
     sleep 5
 
+    # Try with /auth prefix first
     response=$(curl -s -X GET \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
-        "http://localhost:8080/admin/realms/dive25")
+        "http://localhost:8080/auth/admin/realms/dive25")
+    
+    # If first attempt fails, try without /auth prefix
+    if [[ "$response" == *"error"* ]] || [ -z "$response" ]; then
+        response=$(curl -s -X GET \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "http://localhost:8080/admin/realms/dive25")
+    fi
     
     if echo "$response" | jq -e . >/dev/null 2>&1; then
         if [[ $(echo "$response" | jq -r '.realm') == "dive25" ]]; then
