@@ -1,23 +1,46 @@
 services:
   kong:
-    image: kong:3.5
-    user: root
+    image: kong:latest
+    expose:
+      - "8000"  # HTTP
+      - "8443"  # HTTPS
+      - "8001"  # Admin API
+      - "8444"  # Admin API HTTPS
     environment:
-      KONG_DATABASE: "off"
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres  # Use your existing PostgreSQL service name
+      KONG_PG_USER: ${POSTGRES_USER:-postgres}
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+      KONG_PG_DATABASE: kong  # We'll create this database in your existing PostgreSQL
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
       KONG_LOG_LEVEL: debug
-    ports:
-      - "80:8000"
-      - "443:8443"
     volumes:
       - ./config/kong/declarative:/usr/local/kong/declarative:ro
     networks:
       - dive25-net
+    depends_on:
+      - postgres  # Use your existing PostgreSQL service name
+    restart: unless-stopped
+
+  kong-migration:
+    image: kong:latest
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres  # Use your existing PostgreSQL service name
+      KONG_PG_USER: ${POSTGRES_USER:-postgres}
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+      KONG_PG_DATABASE: kong
+    depends_on:
+      - postgres  # Use your existing PostgreSQL service name
+    networks:
+      - dive25-net
+    restart: on-failure
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -154,6 +177,7 @@ services:
       - ./config/postgres/init-keycloak-db.sh:/docker-entrypoint-initdb.d/init-keycloak-db.sh:ro
       - ./config/postgres/init-users.sql:/docker-entrypoint-initdb.d/init-users.sql:ro
       - ./config/postgres/init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
+      - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
       - dive25-net
     healthcheck:
@@ -244,6 +268,24 @@ services:
       retries: 3
     networks:
       - dive25-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${SSL_CERT_PATH:-./certificates/dev/server.crt}:/etc/nginx/ssl/cert.pem:ro
+      - ${SSL_KEY_PATH:-./certificates/dev/server.key}:/etc/nginx/ssl/key.pem:ro
+      - ./frontend/build:/usr/share/nginx/html:ro
+    depends_on:
+      - kong
+      - frontend
+    networks:
+      - dive25-net
+    restart: unless-stopped
 
 networks:
   dive25-net:

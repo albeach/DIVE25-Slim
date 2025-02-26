@@ -334,7 +334,11 @@ if [ -z "$NODE_ENV" ]; then
 fi
 
 # Validate docker-compose file exists
-COMPOSE_FILE="docker-compose.${NODE_ENV}.yml"
+COMPOSE_FILE="docker-compose.yml"
+if [ "$NODE_ENV" != "production" ]; then
+    COMPOSE_FILE="docker-compose.${NODE_ENV}.yml"
+fi
+
 if [ ! -f "$COMPOSE_FILE" ]; then
     log "${RED}Error: Docker compose file '$COMPOSE_FILE' not found${NC}"
     exit 1
@@ -342,11 +346,116 @@ fi
 
 log "Starting deployment for ${NODE_ENV} environment"
 
-# Setup certificates
-log "${YELLOW}Setting up certificates...${NC}"
-if ! "${SCRIPT_DIR}/scripts/cert-manager.sh"; then
-    log "${RED}Certificate setup failed${NC}"
-    exit 1
+# Function to set up certificates based on environment
+setup_certificates() {
+  local env=$1
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Setting up certificates for $env environment..."
+  
+  if [[ "$env" == "dev" || "$env" == "development" ]]; then
+    # Check if development certificates exist
+    if [[ -f "./certificates/dev/server.crt" && -f "./certificates/dev/server.key" ]]; then
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] Using existing development certificates."
+    else
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] Development certificates not found. Generating new ones..."
+      
+      # Check if mkcert is installed
+      if command -v mkcert &> /dev/null; then
+        # Create dev directory if it doesn't exist
+        mkdir -p ./certificates/dev
+        
+        # Install local CA
+        mkcert -install
+        
+        # Generate certificates for local development
+        mkcert -key-file ./certificates/dev/server.key -cert-file ./certificates/dev/server.crt "localhost" "127.0.0.1" "::1" "*.dive25.local"
+        
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Development certificates generated successfully."
+      else
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] mkcert not found. Please install mkcert or manually create development certificates."
+        echo "For macOS: brew install mkcert nss"
+        echo "For Linux: Follow instructions at https://github.com/FiloSottile/mkcert"
+        exit 1
+      fi
+    fi
+    
+    # Set certificate paths for Docker
+    CERT_PATH="./certificates/dev/server.crt"
+    KEY_PATH="./certificates/dev/server.key"
+    
+  elif [[ "$env" == "prod" || "$env" == "production" ]]; then
+    # Check if production certificates exist
+    if [[ -f "./certificates/prod/config/live/dive25.com/fullchain.pem" && -f "./certificates/prod/config/live/dive25.com/privkey.pem" ]]; then
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] Using existing production certificates."
+    else
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: Production certificates not found."
+      echo "Expected files in ./certificates/prod/config/live/dive25.com/"
+      echo "Please ensure Let's Encrypt certificates are properly set up."
+      exit 1
+    fi
+    
+    # Set certificate paths for Docker
+    CERT_PATH="./certificates/prod/config/live/dive25.com/fullchain.pem"
+    KEY_PATH="./certificates/prod/config/live/dive25.com/privkey.pem"
+  else
+    # Prompt user to choose environment if not specified
+    echo "Please select environment for SSL certificates:"
+    echo "1) Development (using certificates in ./certificates/dev/)"
+    echo "2) Production (using Let's Encrypt certificates)"
+    read -p "Enter choice [1-2]: " cert_choice
+    
+    case $cert_choice in
+      1)
+        setup_certificates "dev"
+        return
+        ;;
+      2)
+        setup_certificates "prod"
+        return
+        ;;
+      *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+    esac
+  fi
+  
+  # Export certificate paths as environment variables for docker-compose
+  export SSL_CERT_PATH=$CERT_PATH
+  export SSL_KEY_PATH=$KEY_PATH
+  
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Certificate setup completed successfully."
+}
+
+# Update docker-compose configuration to use the certificates
+update_docker_compose_config() {
+  # Create or update .env.ssl file with certificate paths
+  echo "SSL_CERT_PATH=$SSL_CERT_PATH" > .env.ssl
+  echo "SSL_KEY_PATH=$SSL_KEY_PATH" >> .env.ssl
+  
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Updated Docker configuration with certificate paths."
+}
+
+# Setup certificates based on environment
+if [[ "$NODE_ENV" == "production" ]]; then
+  ENVIRONMENT="prod"
+else
+  ENVIRONMENT="dev"
+fi
+
+# Setup certificates directly instead of using cert-manager.sh
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Setting up certificates..."
+setup_certificates "$ENVIRONMENT"
+update_docker_compose_config
+
+# Source the SSL environment variables
+if [ -f .env.ssl ]; then
+  set -a
+  source .env.ssl
+  set +a
+  echo "SSL certificate paths loaded from .env.ssl"
+else
+  echo "ERROR: .env.ssl file not found after certificate setup"
+  exit 1
 fi
 
 # Set Keycloak admin credentials if not already set
@@ -358,6 +467,13 @@ if [ -z "$KC_BOOTSTRAP_ADMIN_PASSWORD" ]; then
     export KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
 fi
 
+# Validate docker-compose file before starting
+if ! docker-compose -f "$COMPOSE_FILE" config > /dev/null; then
+    log "${RED}Docker compose file '$COMPOSE_FILE' has syntax errors${NC}"
+    docker-compose -f "$COMPOSE_FILE" config
+    exit 1
+fi
+
 # Start services
 log "${YELLOW}Starting services...${NC}"
 if ! docker-compose -f "$COMPOSE_FILE" up -d; then
@@ -367,10 +483,14 @@ fi
 
 # Verify deployment
 log "${YELLOW}Verifying deployment...${NC}"
-if ! "${SCRIPT_DIR}/scripts/deployment-verify.sh"; then
-    log "${RED}Deployment verification failed. Checking logs...${NC}"
-    docker-compose logs keycloak
-    exit 1
+if [ -f "${SCRIPT_DIR}/scripts/deployment-verify.sh" ]; then
+    if ! "${SCRIPT_DIR}/scripts/deployment-verify.sh"; then
+        log "${RED}Deployment verification failed. Checking logs...${NC}"
+        docker-compose logs keycloak
+        exit 1
+    fi
+else
+    log "${YELLOW}Deployment verification script not found, skipping verification${NC}"
 fi
 
 log "${GREEN}Deployment completed successfully!${NC}"

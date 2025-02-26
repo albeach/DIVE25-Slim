@@ -25,6 +25,10 @@ verify_env() {
         "JWT_SECRET"
         "API_KEY"
         "GRAFANA_ADMIN_PASSWORD"
+        "POSTGRES_PASSWORD"
+        "LDAP_ADMIN_PASSWORD"
+        "LDAP_CONFIG_PASSWORD"
+        "LDAP_READONLY_PASSWORD"
     )
 
     for var in "${required_vars[@]}"; do
@@ -40,16 +44,27 @@ verify_env() {
 verify_certificates() {
     log "${YELLOW}Verifying SSL certificates...${NC}"
     
-    CERT_DIR="certificates/prod"
-    if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
-        log "${RED}Error: SSL certificates not found in $CERT_DIR${NC}"
+    # Determine certificate directory based on environment
+    local cert_dir
+    if [ "${NODE_ENV}" = "production" ] || [ "${NODE_ENV}" = "prod" ]; then
+        cert_dir="./certificates/prod/config/live/dive25.com"
+        cert_file="fullchain.pem"
+        key_file="privkey.pem"
+    else
+        cert_dir="./certificates/dev"
+        cert_file="server.crt"
+        key_file="server.key"
+    fi
+
+    if [ ! -f "$cert_dir/$cert_file" ] || [ ! -f "$cert_dir/$key_file" ]; then
+        log "${RED}Error: SSL certificates not found in $cert_dir${NC}"
         exit 1
     fi
     
-    if ! openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -checkend 0; then
+    if ! openssl x509 -in "$cert_dir/$cert_file" -noout -checkend 0; then
         log "${RED}Error: SSL certificate is expired${NC}"
         exit 1
-    }
+    fi
     
     log "${GREEN}SSL certificates verified${NC}"
 }
@@ -60,12 +75,12 @@ verify_docker() {
     if ! docker info >/dev/null 2>&1; then
         log "${RED}Error: Docker is not running${NC}"
         exit 1
-    }
+    fi
     
     if ! docker-compose version >/dev/null 2>&1; then
         log "${RED}Error: Docker Compose is not installed${NC}"
         exit 1
-    }
+    fi
     
     log "${GREEN}Docker configuration verified${NC}"
 }
@@ -82,6 +97,12 @@ verify_services() {
         "kong"
         "prometheus"
         "grafana"
+        "postgres"
+        "opa"
+        "openldap"
+        "phpldapadmin"
+        "ldap-exporter"
+        "nginx"
     )
 
     for service in "${services[@]}"; do
@@ -113,16 +134,19 @@ verify_ports() {
         80
         443
         3000
-        8080
-        27017
-        6379
-        9090
         3001
+        3002
+        8080
+        8181
+        8444
+        9090
+        9100
+        9330
     )
 
     for port in "${required_ports[@]}"; do
-        if netstat -tln | grep -q ":$port "; then
-            log "${RED}Error: Port $port is already in use${NC}"
+        if netstat -tln | grep -q ":$port " && ! docker-compose ps | grep -q ":$port->"; then
+            log "${RED}Error: Port $port is already in use by a non-Docker process${NC}"
             exit 1
         fi
     done
@@ -135,11 +159,14 @@ verify_files() {
     
     required_files=(
         "docker-compose.yml"
-        "docker-compose.production.yml"
-        ".env.production"
+        ".env"
+        "nginx/nginx.conf"
         "nginx/conf.d/default.conf"
-        "kong/declarative/kong.yml"
-        "config/keycloak/keycloak-realm.json"
+        "config/kong/declarative/kong.yml"
+        "config/keycloak/dive25-realm.json"
+        "config/postgres/init-keycloak-db.sh"
+        "config/postgres/init-users.sql"
+        "config/postgres/init-schema.sql"
     )
 
     for file in "${required_files[@]}"; do
@@ -157,8 +184,10 @@ verify_permissions() {
     
     # Ensure sensitive files have restricted permissions
     files_640=(
-        ".env.production"
-        "certificates/prod/privkey.pem"
+        ".env"
+        ".env.ssl"
+        "certificates/dev/server.key"
+        "certificates/prod/config/live/dive25.com/privkey.pem"
     )
 
     for file in "${files_640[@]}"; do
@@ -170,30 +199,9 @@ verify_permissions() {
     log "${GREEN}File permissions verified${NC}"
 }
 
-deploy() {
-    log "${YELLOW}Starting deployment...${NC}"
-    
-    # Pull latest images
-    docker-compose -f docker-compose.production.yml pull
-    
-    # Start services
-    docker-compose -f docker-compose.production.yml up -d
-    
-    # Wait for services to be healthy
-    sleep 30
-    
-    # Verify services are running
-    if ! curl -sf http://localhost/health > /dev/null; then
-        log "${RED}Error: Health check failed${NC}"
-        exit 1
-    fi
-    
-    log "${GREEN}Deployment completed successfully${NC}"
-}
-
 # Add new helper function for dependency checking
 check_dependencies() {
-    local deps=("curl" "docker" "docker-compose" "jq" "openssl")
+    local deps=("curl" "docker" "docker-compose" "jq" "openssl" "netstat")
     local missing=()
 
     log "${YELLOW}Checking dependencies...${NC}"
@@ -234,127 +242,311 @@ verify_service() {
                 if echo "$content" | grep -q "$content_pattern"; then
                     log "${GREEN}✓ $service is healthy (matched content pattern)${NC}"
                     return 0
+                else
+                    log "${YELLOW}Got expected status code but content pattern not found. Content: ${content:0:100}...${NC}"
                 fi
             else
                 log "${GREEN}✓ $service is healthy${NC}"
                 return 0
             fi
         fi
-        sleep 2
-        elapsed=$((elapsed + 2))
+        
+        if [ "$http_code" != "$expected_code" ]; then
+            log "${YELLOW}Waiting for $service (got $http_code, expected $expected_code)...${NC}"
+        else
+            log "${YELLOW}Waiting for $service (waiting for content pattern match)...${NC}"
+        fi
+        
+        sleep 5
+        elapsed=$((elapsed + 5))
     done
 
-    log "${RED}✗ $service failed to respond (expected $expected_code, got $http_code)${NC}"
+    log "${RED}✗ $service failed to respond correctly${NC}"
+    if [ -n "$content_pattern" ]; then
+        log "${RED}Expected status code $expected_code (got $http_code) and content pattern '$content_pattern'${NC}"
+        log "${YELLOW}Last response content: ${content:0:200}...${NC}"
+    else
+        log "${RED}Expected status code $expected_code (got $http_code)${NC}"
+    fi
     return 1
 }
 
-# Fix certificate directory ternary syntax
-verify_certificates() {
-    local cert_dir
-    if [ "${ENV,,}" = "production" ]; then
-        cert_dir="${PROJECT_ROOT}/certificates/prod"
-    else
-        cert_dir="${PROJECT_ROOT}/certificates/dev"
+verify_mongodb() {
+    log "${YELLOW}Verifying MongoDB...${NC}"
+    
+    # Check if MongoDB container is running
+    if ! docker-compose ps mongodb | grep -q "Up"; then
+        log "${RED}✗ MongoDB container is not running${NC}"
+        docker-compose logs --tail=20 mongodb
+        return 1
     fi
+    
+    # Give MongoDB more time to initialize
+    log "${YELLOW}Waiting for MongoDB to initialize (15s)...${NC}"
+    sleep 15
+    
+    # Try to connect to MongoDB using mongosh with authentication
+    log "${YELLOW}Attempting to connect with credentials...${NC}"
+    if ! docker-compose exec -T mongodb mongosh \
+        "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin" \
+        --quiet \
+        --eval 'try { db.runCommand({ ping: 1 }) } catch(e) { print(e); }'; then
+        
+        log "${RED}✗ MongoDB connection failed${NC}"
+        log "${YELLOW}Checking MongoDB status...${NC}"
+        
+        # Check if authentication is enabled
+        log "${YELLOW}Checking MongoDB configuration...${NC}"
+        docker-compose exec -T mongodb ps aux | grep mongod
+        
+        # Try to connect without authentication as a test
+        log "${YELLOW}Attempting connection without auth...${NC}"
+        if docker-compose exec -T mongodb mongosh \
+            --quiet \
+            --eval 'try { db.runCommand({ ping: 1 }) } catch(e) { print(e) }'; then
+            log "${YELLOW}MongoDB responds without authentication${NC}"
+            log "${RED}✗ Authentication may not be properly configured${NC}"
+            
+            # Show current users
+            log "${YELLOW}Checking MongoDB users...${NC}"
+            docker-compose exec -T mongodb mongosh \
+                --quiet \
+                --eval 'try { db.getSiblingDB("admin").getUsers() } catch(e) { print(e) }'
+        else
+            log "${RED}✗ MongoDB is not responding at all${NC}"
+            log "${YELLOW}Recent MongoDB logs:${NC}"
+            docker-compose logs --tail=50 mongodb
+        fi
+        
+        return 1
+    fi
+    
+    log "${GREEN}✓ MongoDB is healthy${NC}"
+    return 0
+}
 
-    # ... existing code ...
+verify_postgres() {
+    log "${YELLOW}Verifying PostgreSQL...${NC}"
+    
+    # Check if PostgreSQL container is running
+    if ! docker-compose ps postgres | grep -q "Up"; then
+        log "${RED}✗ PostgreSQL container is not running${NC}"
+        return 1
+    fi
+    
+    # Try to connect to PostgreSQL
+    if ! docker-compose exec -T postgres pg_isready -U postgres; then
+        log "${RED}✗ PostgreSQL is not responding${NC}"
+        return 1
+    fi
+    
+    # Check if Keycloak database exists
+    if ! docker-compose exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -qw keycloak; then
+        log "${RED}✗ Keycloak database does not exist in PostgreSQL${NC}"
+        return 1
+    fi
+    
+    log "${GREEN}✓ PostgreSQL is healthy${NC}"
+    return 0
 }
 
 verify_keycloak() {
     log "${YELLOW}Verifying Keycloak...${NC}"
     
-    # Wait for Keycloak to be ready with longer timeout
-    verify_service "Keycloak" "8080" "/health" 90 || return 1
-
-    log "${YELLOW}Obtaining Keycloak admin token...${NC}"
-    
-    # Check for both old and new environment variables
-    local admin_user=${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-""}}
-    local admin_pass=${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-""}}
-
-    if [ -z "$admin_user" ] || [ -z "$admin_pass" ]; then
-        log "${RED}✗ Keycloak admin credentials not set${NC}"
-        log "${YELLOW}Please set either:${NC}"
-        log "  - KC_BOOTSTRAP_ADMIN_USERNAME and KC_BOOTSTRAP_ADMIN_PASSWORD (recommended)"
-        log "  - KEYCLOAK_ADMIN and KEYCLOAK_ADMIN_PASSWORD (deprecated)"
-        return 1
-    }
-
-    # Add longer delay to ensure Keycloak is fully initialized
-    log "${YELLOW}Waiting for Keycloak to fully initialize...${NC}"
-    sleep 10
-
-    # Get admin token with verbose curl output for debugging
-    log "${YELLOW}Attempting login with username: $admin_user${NC}"
-    local token_response
-    token_response=$(curl -v -X POST \
-        "http://localhost:8080/realms/master/protocol/openid-connect/token" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "client_id=admin-cli" \
-        -d "username=$admin_user" \
-        -d "password=$admin_pass" \
-        -d "grant_type=password" 2>&1)
-
-    # Extract the token from the response
-    local token
-    token=$(echo "$token_response" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
-
-    if [ -z "$token" ]; then
-        log "${RED}✗ Failed to obtain Keycloak admin token${NC}"
-        log "${RED}Full response:${NC}"
-        echo "$token_response"
-        
-        log "${YELLOW}Checking Keycloak container status...${NC}"
-        docker-compose ps keycloak
-        
-        log "${YELLOW}Checking Keycloak logs...${NC}"
-        docker-compose logs --tail=50 keycloak
+    # Check if Keycloak container is running
+    if ! docker-compose ps keycloak | grep -q "Up"; then
+        log "${RED}✗ Keycloak container is not running${NC}"
+        docker-compose logs --tail=20 keycloak
         return 1
     fi
-
-    log "${GREEN}✓ Successfully obtained admin token${NC}"
-    log "${YELLOW}Verifying realm 'dive25'...${NC}"
     
-    # Check realm with updated API endpoint
-    local realm_response
-    realm_response=$(curl -s -w "\n%{http_code}" \
-        -H "Authorization: Bearer $token" \
-        "http://localhost:8080/admin/realms/dive25")
+    # Give Keycloak time to initialize
+    log "${YELLOW}Waiting for Keycloak to initialize...${NC}"
     
-    local http_code=$(echo "$realm_response" | tail -n1)
-    local content=$(echo "$realm_response" | sed \$d)
+    local timeout=90
+    local interval=5
+    local elapsed=0
+    
+    while [ $elapsed -lt $timeout ]; do
+        # Try both with and without /auth prefix as per docker-compose.yml configuration
+        if curl -s -f "http://localhost:8080/auth/health/ready" > /dev/null 2>&1; then
+            log "${GREEN}✓ Keycloak is healthy (using /auth prefix)${NC}"
+            return 0
+        elif curl -s -f "http://localhost:8080/health/ready" > /dev/null 2>&1; then
+            log "${GREEN}✓ Keycloak is healthy (without /auth prefix)${NC}"
+            return 0
+        elif curl -s -f "http://localhost:8080/auth/realms/master" > /dev/null 2>&1; then
+            log "${GREEN}✓ Keycloak is healthy (master realm accessible)${NC}"
+            return 0
+        elif curl -s -f "http://localhost:8080/realms/master" > /dev/null 2>&1; then
+            log "${GREEN}✓ Keycloak is healthy (master realm accessible, no /auth)${NC}"
+            return 0
+        fi
+        
+        log "${YELLOW}Waiting for Keycloak to be ready... (${elapsed}s/${timeout}s)${NC}"
+        sleep $interval
+        elapsed=$((elapsed + interval))
+        
+        # Show logs periodically during the wait
+        if [ $((elapsed % 20)) -eq 0 ]; then
+            log "${YELLOW}Recent Keycloak logs:${NC}"
+            docker-compose logs --tail=20 keycloak
+        fi
+    done
+    
+    log "${RED}✗ Keycloak failed to become ready within ${timeout} seconds${NC}"
+    log "${YELLOW}Final Keycloak logs:${NC}"
+    docker-compose logs --tail=50 keycloak
+    return 1
+}
 
-    if [ "$http_code" = "200" ]; then
-        log "${GREEN}✓ Keycloak realm 'dive25' verified${NC}"
-        return 0
+verify_kong() {
+    log "${YELLOW}Verifying Kong...${NC}"
+    
+    # Check if Kong container is running
+    if ! docker-compose ps kong | grep -q "Up"; then
+        log "${RED}✗ Kong container is not running${NC}"
+        docker-compose logs --tail=20 kong
+        return 1
+    fi
+    
+    # Check Kong migration status
+    local migration_output=$(docker-compose logs kong-migration)
+    if echo "$migration_output" | grep -q "Database is up-to-date"; then
+        log "${GREEN}✓ Kong migration completed successfully${NC}"
     else
-        log "${RED}✗ Keycloak realm verification failed (HTTP $http_code)${NC}"
-        log "${RED}Response: $content${NC}"
-        
-        log "${YELLOW}Attempting to list all realms...${NC}"
-        curl -s -H "Authorization: Bearer $token" \
-            "http://localhost:8080/admin/realms" | jq -r '.[].realm'
-        
-        log "${YELLOW}Checking realm import status in logs...${NC}"
-        docker-compose logs --tail=100 keycloak | grep -i "realm.*import"
+        log "${RED}✗ Kong database migration status unclear${NC}"
+        docker-compose logs --tail=20 kong-migration
         return 1
     fi
+
+    # Give Kong time to initialize
+    log "${YELLOW}Waiting for Kong to initialize...${NC}"
+    local timeout=45
+    local elapsed=0
+    local interval=5
+
+    while [ $elapsed -lt $timeout ]; do
+        # Use kong health command to check status
+        if docker-compose exec -T kong kong health > /dev/null 2>&1; then
+            log "${GREEN}✓ Kong is healthy${NC}"
+            return 0
+        fi
+        
+        log "${YELLOW}Waiting for Kong to be ready... (${elapsed}s/${timeout}s)${NC}"
+        sleep $interval
+        elapsed=$((elapsed + interval))
+        
+        # Show logs periodically during the wait
+        if [ $((elapsed % 15)) -eq 0 ]; then
+            log "${YELLOW}Recent Kong logs:${NC}"
+            docker-compose logs --tail=20 kong
+        fi
+    done
+    
+    log "${RED}✗ Kong failed to become ready within ${timeout} seconds${NC}"
+    log "${YELLOW}Final Kong status:${NC}"
+    docker-compose exec -T kong kong health || true
+    log "${YELLOW}Final Kong logs:${NC}"
+    docker-compose logs --tail=50 kong
+    return 1
+}
+
+verify_nginx() {
+    log "${YELLOW}Verifying Nginx...${NC}"
+    
+    # Check if Nginx container is running
+    if ! docker-compose ps nginx | grep -q "Up"; then
+        log "${RED}✗ Nginx container is not running${NC}"
+        return 1
+    fi
+    
+    # Check Nginx HTTP response
+    if ! curl -s -I http://localhost | grep -q "HTTP/1.1 200 OK"; then
+        log "${RED}✗ Nginx is not responding correctly on HTTP${NC}"
+        return 1
+    fi
+    
+    log "${GREEN}✓ Nginx is healthy${NC}"
+    return 0
+}
+
+verify_ldap() {
+    log "${YELLOW}Verifying OpenLDAP...${NC}"
+    
+    # Check if OpenLDAP container is running
+    if ! docker-compose ps openldap | grep -q "Up"; then
+        log "${RED}✗ OpenLDAP container is not running${NC}"
+        return 1
+    fi
+    
+    # Check if phpLDAPadmin container is running
+    if ! docker-compose ps phpldapadmin | grep -q "Up"; then
+        log "${RED}✗ phpLDAPadmin container is not running${NC}"
+        return 1
+    fi
+    
+    log "${GREEN}✓ LDAP services are healthy${NC}"
+    return 0
+}
+
+verify_monitoring() {
+    log "${YELLOW}Verifying monitoring services...${NC}"
+    
+    # Check if Prometheus container is running
+    if ! docker-compose ps prometheus | grep -q "Up"; then
+        log "${RED}✗ Prometheus container is not running${NC}"
+        return 1
+    fi
+    
+    # Check if Grafana container is running
+    if ! docker-compose ps grafana | grep -q "Up"; then
+        log "${RED}✗ Grafana container is not running${NC}"
+        return 1
+    fi
+    
+    # Check Prometheus API
+    if ! curl -s http://localhost:9090/-/healthy | grep -q "Prometheus is Healthy"; then
+        log "${RED}✗ Prometheus API is not responding correctly${NC}"
+        return 1
+    fi
+    
+    # Check Grafana API
+    if ! curl -s http://localhost:3001/api/health | grep -q "ok"; then
+        log "${RED}✗ Grafana API is not responding correctly${NC}"
+        return 1
+    fi
+    
+    log "${GREEN}✓ Monitoring services are healthy${NC}"
+    return 0
 }
 
 main() {
-    log "Starting deployment verification for ${ENV} environment"
+    log "Starting deployment verification for ${NODE_ENV:-development} environment"
 
     # Check dependencies first
     check_dependencies || exit 1
-
-    # ... existing code ...
-
-    # Enhanced service verifications with content patterns
+    
+    # Verify environment and configuration
+    verify_env || exit 1
+    verify_certificates || exit 1
+    verify_docker || exit 1
+    verify_services || exit 1
+    verify_network || exit 1
+    verify_ports || exit 1
+    verify_files || exit 1
+    verify_permissions || exit 1
+    
+    # Verify individual services
     verify_mongodb || exit 1
+    verify_postgres || exit 1
     verify_keycloak || exit 1
-    verify_service "Kong" "8001" "/status" 30 200 '"database":{"reachable":true}' || exit 1
+    verify_kong || exit 1
     verify_service "API" "3000" "/health" 30 200 '"status":"healthy"' || exit 1
     verify_service "Frontend" "3002" "/" 30 200 "<html" || exit 1
+    verify_nginx || exit 1
+    verify_ldap || exit 1
+    verify_monitoring || exit 1
 
     log "${GREEN}All verifications passed successfully!${NC}"
 }
