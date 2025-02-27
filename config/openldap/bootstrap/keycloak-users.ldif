@@ -1,0 +1,31 @@
+# Mike (Admin User)
+dn: uid=mike,ou=users,dc=dive25,dc=local
+objectClass: natoPerson
+objectClass: inetOrgPerson
+uid: mike
+sn: Admin
+givenName: Mike
+cn: Mike Admin
+mail: mike@dive25.com
+userPassword: {SSHA}Mike2025!
+natoClearance: TOP_SECRET
+natoReleasableTo: NATO
+natoReleasableTo: FVEY
+natoCoi: OpAlpha
+natoCoi: MissionX
+
+# Aubrey (Admin User)
+dn: uid=aubrey,ou=users,dc=dive25,dc=local
+objectClass: natoPerson
+objectClass: inetOrgPerson
+uid: aubrey
+sn: Admin
+givenName: Aubrey
+cn: Aubrey Admin
+mail: aubrey@dive25.com
+userPassword: {SSHA}Aubrey2025!
+natoClearance: TOP_SECRET
+natoReleasableTo: NATO
+natoReleasableTo: FVEY
+natoCoi: OpAlpha
+natoCoi: MissionX 

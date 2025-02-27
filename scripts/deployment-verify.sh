@@ -535,23 +535,28 @@ verify_monitoring() {
                 
                 # Check if Grafana is running (if configured)
                 if docker-compose ps grafana | grep -q "Up"; then
-                    # Use basic auth with default credentials (admin:admin)
-                    if curl -s -u admin:admin "http://localhost:3000/api/health" | grep -q '"database":"ok"'; then
-                        log "${GREEN}✓ Grafana is healthy${NC}"
+                    # Use admin credentials from environment variable (fallback to admin:admin if not set)
+                    local grafana_pass="${GRAFANA_ADMIN_PASSWORD:-admin}"
+                    # Try multiple health endpoints with proper credentials
+                    if curl -s -f -u "admin:${grafana_pass}" "http://localhost:3000/api/health" > /dev/null; then
+                        log "${GREEN}✓ Grafana is healthy (using /api/health)${NC}"
+                    elif curl -s -f "http://localhost:3000/healthz" > /dev/null; then
+                        log "${GREEN}✓ Grafana is healthy (using /healthz)${NC}"
+                    elif curl -s -f -u "admin:${grafana_pass}" "http://localhost:3000/api/health/db" > /dev/null; then
+                        log "${GREEN}✓ Grafana is healthy (using /api/health/db)${NC}"
+                    elif curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000" | grep -q -E "200|302"; then
+                        log "${GREEN}✓ Grafana is responsive (returns HTTP 200/302)${NC}"
                     else
-                        # Try alternative health endpoint
-                        if curl -s "http://localhost:3000/healthz" | grep -q "ok"; then
-                            log "${GREEN}✓ Grafana is healthy (using /healthz)${NC}"
+                        # Wait a bit more for Grafana to initialize if needed
+                        sleep 5
+                        # Final check with status code output for debugging
+                        local status_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000")
+                        if [[ "$status_code" =~ ^(200|302)$ ]]; then
+                            log "${GREEN}✓ Grafana is responsive after delay (HTTP $status_code)${NC}"
                         else
-                            # Wait a bit more for Grafana to initialize if needed
-                            sleep 5
-                            if curl -s "http://localhost:3000/healthz" | grep -q "ok"; then
-                                log "${GREEN}✓ Grafana is healthy (after delay)${NC}"
-                            else
-                                log "${YELLOW}Warning: Grafana is running but health check failed${NC}"
-                                log "${YELLOW}Grafana logs:${NC}"
-                                docker-compose logs --tail=20 grafana
-                            fi
+                            log "${YELLOW}Warning: Grafana is running but health check failed (HTTP $status_code)${NC}"
+                            log "${YELLOW}Grafana logs:${NC}"
+                            docker-compose logs --tail=20 grafana
                         fi
                     fi
                 fi

@@ -15,3 +15,6 @@ ldapadd -x -H ldap://localhost -D "cn=admin,dc=dive25,dc=local" -w $LDAP_ADMIN_P
 
 # Add sample users
 ldapadd -x -H ldap://localhost -D "cn=admin,dc=dive25,dc=local" -w $LDAP_ADMIN_PASSWORD -f /bootstrap/users.ldif
+
+# Add Keycloak users
+ldapadd -x -H ldap://localhost -D "cn=admin,dc=dive25,dc=local" -w $LDAP_ADMIN_PASSWORD -f /bootstrap/keycloak-users.ldif || echo "Keycloak users may already exist"
