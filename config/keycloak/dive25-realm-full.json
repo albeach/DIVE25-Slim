@@ -1,0 +1,979 @@
+{
+    "id": "dive25",
+    "realm": "dive25",
+    "displayName": "DIVE25 Platform",
+    "displayNameHtml": "<div class=\"kc-logo-text\"><span>DIVE25 Platform</span></div>",
+    "notBefore": 0,
+    "defaultSignatureAlgorithm": "RS256",
+    "revokeRefreshToken": false,
+    "refreshTokenMaxReuse": 0,
+    "accessTokenLifespan": 300,
+    "accessTokenLifespanForImplicitFlow": 900,
+    "ssoSessionIdleTimeout": 1800,
+    "ssoSessionMaxLifespan": 36000,
+    "ssoSessionIdleTimeoutRememberMe": 0,
+    "ssoSessionMaxLifespanRememberMe": 0,
+    "offlineSessionIdleTimeout": 2592000,
+    "offlineSessionMaxLifespanEnabled": true,
+    "offlineSessionMaxLifespan": 5184000,
+    "clientSessionIdleTimeout": 0,
+    "clientSessionMaxLifespan": 0,
+    "clientOfflineSessionIdleTimeout": 0,
+    "clientOfflineSessionMaxLifespan": 0,
+    "accessCodeLifespan": 60,
+    "accessCodeLifespanUserAction": 300,
+    "accessCodeLifespanLogin": 1800,
+    "actionTokenGeneratedByAdminLifespan": 43200,
+    "actionTokenGeneratedByUserLifespan": 300,
+    "oauth2DeviceCodeLifespan": 600,
+    "oauth2DevicePollingInterval": 5,
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "registrationEmailAsUsername": true,
+    "rememberMe": true,
+    "verifyEmail": true,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "editUsernameAllowed": false,
+    "bruteForceProtected": true,
+    "permanentLockout": false,
+    "maxTemporaryLockouts": 0,
+    "bruteForceStrategy": "MULTIPLE",
+    "maxFailureWaitSeconds": 900,
+    "minimumQuickLoginWaitSeconds": 60,
+    "waitIncrementSeconds": 60,
+    "quickLoginCheckMilliSeconds": 1000,
+    "maxDeltaTimeSeconds": 43200,
+    "failureFactor": 5,
+    "roles": {
+        "realm": [
+            {
+                "id": "001f15e8-d900-47d8-86e9-56b60cccd889",
+                "name": "user",
+                "description": "Basic user role",
+                "composite": false,
+                "clientRole": false,
+                "containerId": "dive25",
+                "attributes": {}
+            },
+            {
+                "id": "d24852b6-fdc2-4920-989f-fd9459ddd24e",
+                "name": "admin",
+                "description": "Administrative role",
+                "composite": false,
+                "clientRole": false,
+                "containerId": "dive25",
+                "attributes": {}
+            },
+            {
+                "id": "a7a98ef2-0b64-4dce-bd08-fb66b8f617ff",
+                "name": "default-roles-dive25",
+                "description": "${role_default-roles}",
+                "composite": true,
+                "composites": {
+                    "realm": [
+                        "offline_access",
+                        "uma_authorization"
+                    ],
+                    "client": {
+                        "account": [
+                            "view-profile",
+                            "manage-account"
+                        ]
+                    }
+                },
+                "clientRole": false,
+                "containerId": "dive25",
+                "attributes": {}
+            },
+            {
+                "id": "dffb22e4-06dc-4990-81f8-90890a1c0d24",
+                "name": "offline_access",
+                "description": "${role_offline-access}",
+                "composite": false,
+                "clientRole": false,
+                "containerId": "dive25",
+                "attributes": {}
+            },
+            {
+                "id": "81d8f941-480d-42d6-b8cd-6f2738b04497",
+                "name": "uma_authorization",
+                "description": "${role_uma_authorization}",
+                "composite": false,
+                "clientRole": false,
+                "containerId": "dive25",
+                "attributes": {}
+            }
+        ]
+    },
+    "defaultRole": {
+        "id": "a7a98ef2-0b64-4dce-bd08-fb66b8f617ff",
+        "name": "default-roles-dive25",
+        "description": "${role_default-roles}",
+        "composite": true,
+        "clientRole": false,
+        "containerId": "dive25"
+    },
+    "requiredCredentials": [
+        "password"
+    ],
+    "otpPolicyType": "totp",
+    "otpPolicyAlgorithm": "HmacSHA1",
+    "otpPolicyInitialCounter": 0,
+    "otpPolicyDigits": 6,
+    "otpPolicyLookAheadWindow": 1,
+    "otpPolicyPeriod": 30,
+    "otpPolicyCodeReusable": false,
+    "otpSupportedApplications": [
+        "totpAppFreeOTPName",
+        "totpAppGoogleName",
+        "totpAppMicrosoftAuthenticatorName"
+    ],
+    "localizationTexts": {
+        "en": {
+            "profile.attribute-group.dive25-attributes": "DIVE25 Attributes",
+            "profile.attribute-group-description.dive25-attributes": "DIVE25 Attributes",
+            "profile.attributes.clearance": "Clearance",
+            "profile.attributes.coiTags": "COI Tags"
+        }
+    },
+    "webAuthnPolicyRpEntityName": "keycloak",
+    "webAuthnPolicySignatureAlgorithms": [
+        "ES256",
+        "RS256"
+    ],
+    "webAuthnPolicyRpId": "",
+    "webAuthnPolicyAttestationConveyancePreference": "not specified",
+    "webAuthnPolicyAuthenticatorAttachment": "not specified",
+    "webAuthnPolicyRequireResidentKey": "not specified",
+    "webAuthnPolicyUserVerificationRequirement": "not specified",
+    "webAuthnPolicyCreateTimeout": 0,
+    "webAuthnPolicyAvoidSameAuthenticatorRegister": false,
+    "webAuthnPolicyAcceptableAaguids": [],
+    "webAuthnPolicyExtraOrigins": [],
+    "webAuthnPolicyPasswordlessExtraOrigins": [],
+    "groups": [
+        {
+            "id": "f54f9dff-a742-4a87-a184-a1a31f52b966",
+            "name": "CIA",
+            "path": "/CIA",
+            "attributes": {},
+            "realmRoles": [],
+            "clientRoles": {},
+            "subGroups": []
+        },
+        {
+            "id": "a5f9f50e-a3bc-4867-8ac9-cefb2a0b7902",
+            "name": "DIA",
+            "path": "/DIA",
+            "attributes": {},
+            "realmRoles": [],
+            "clientRoles": {},
+            "subGroups": []
+        },
+        {
+            "id": "e7be8746-9ee1-45c0-a3eb-a8d7bc60cbc0",
+            "name": "FBI",
+            "path": "/FBI",
+            "attributes": {},
+            "realmRoles": [],
+            "clientRoles": {},
+            "subGroups": []
+        },
+        {
+            "id": "a55f2dbe-2b67-4ea5-978e-6d9e4ebbbde3",
+            "name": "NSA",
+            "path": "/NSA",
+            "attributes": {},
+            "realmRoles": [],
+            "clientRoles": {},
+            "subGroups": []
+        }
+    ],
+    "users": [
+        {
+            "id": "5e89cb10-4e6a-4851-8a9f-fe0e7617f3b1",
+            "createdTimestamp": 1692814218945,
+            "username": "mike",
+            "enabled": true,
+            "totp": false,
+            "emailVerified": true,
+            "firstName": "Mike",
+            "lastName": "Admin",
+            "email": "mike@dive25.com",
+            "credentials": [
+                {
+                    "id": "47a5d7a8-0e13-4b6b-9716-ebbb80989bbe",
+                    "type": "password",
+                    "userLabel": "My Password",
+                    "createdDate": 1692814236432,
+                    "secretData": "{\"value\":\"Mike2025!\",\"salt\":\"FWmqvRV7uf7VU5w2jnTxpg==\"}",
+                    "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+                }
+            ],
+            "disableableCredentialTypes": [],
+            "requiredActions": [],
+            "realmRoles": [
+                "admin",
+                "user",
+                "default-roles-dive25"
+            ],
+            "clientRoles": {},
+            "notBefore": 0,
+            "groups": [
+                "/NSA",
+                "/CIA"
+            ],
+            "attributes": {
+                "clearance": [
+                    "TOP_SECRET"
+                ],
+                "coiTags": [
+                    "[\"NATO\", \"FVEY\"]"
+                ],
+                "phoneNumber": [
+                    "+1-555-123-4567"
+                ],
+                "department": [
+                    "Engineering"
+                ],
+                "location": [
+                    "Washington DC"
+                ]
+            }
+        },
+        {
+            "id": "6a13e46c-3b3c-4e02-a349-95c442692a51",
+            "createdTimestamp": 1692814218945,
+            "username": "aubrey",
+            "enabled": true,
+            "totp": false,
+            "emailVerified": true,
+            "firstName": "Aubrey",
+            "lastName": "Admin",
+            "email": "aubrey@dive25.com",
+            "credentials": [
+                {
+                    "id": "3c95e8a9-1d72-4f69-8a3d-2c984f0cbe71",
+                    "type": "password",
+                    "userLabel": "My Password",
+                    "createdDate": 1692814236432,
+                    "secretData": "{\"value\":\"Aubrey2025!\",\"salt\":\"gTw5JKqQs+VRYnTxFa0RDA==\"}",
+                    "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+                }
+            ],
+            "disableableCredentialTypes": [],
+            "requiredActions": [],
+            "realmRoles": [
+                "admin",
+                "user",
+                "default-roles-dive25"
+            ],
+            "clientRoles": {},
+            "notBefore": 0,
+            "groups": [
+                "/DIA",
+                "/FBI"
+            ],
+            "attributes": {
+                "clearance": [
+                    "TOP_SECRET"
+                ],
+                "coiTags": [
+                    "[\"NATO\", \"FVEY\"]"
+                ],
+                "phoneNumber": [
+                    "+1-555-987-6543"
+                ],
+                "department": [
+                    "Security"
+                ],
+                "location": [
+                    "London"
+                ]
+            }
+        }
+    ],
+    "scopeMappings": [
+        {
+            "clientScope": "offline_access",
+            "roles": [
+                "offline_access"
+            ]
+        }
+    ],
+    "clientScopeMappings": {
+        "account": [
+            {
+                "client": "account-console",
+                "roles": [
+                    "manage-account",
+                    "view-groups"
+                ]
+            }
+        ]
+    },
+    "clients": [
+        {
+            "id": "7ffec23e-371b-4a98-ad0a-645a8ee625e8",
+            "clientId": "dive25-api",
+            "name": "DIVE25 API Service",
+            "description": "Backend API service for DIVE25 platform",
+            "rootUrl": "",
+            "baseUrl": "",
+            "surrogateAuthRequired": false,
+            "enabled": true,
+            "alwaysDisplayInConsole": false,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "${env:KEYCLOAK_CLIENT_SECRET}",
+            "redirectUris": [
+                "http://localhost:3000/*",
+                "https://dive25.com/*",
+                "https://api.dive25.com/*"
+            ],
+            "webOrigins": [
+                "*"
+            ],
+            "notBefore": 0,
+            "bearerOnly": false,
+            "consentRequired": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": true,
+            "authorizationServicesEnabled": true,
+            "publicClient": false,
+            "frontchannelLogout": false,
+            "protocol": "openid-connect",
+            "attributes": {
+                "saml.assertion.signature": "false",
+                "access.token.lifespan": "1800",
+                "saml.force.post.binding": "false",
+                "saml.multivalued.roles": "false",
+                "saml.encrypt": "false",
+                "post.logout.redirect.uris": "+",
+                "backchannel.logout.revoke.offline.tokens": "false",
+                "saml.server.signature": "false",
+                "saml.server.signature.keyinfo.ext": "false",
+                "exclude.session.state.from.auth.response": "false",
+                "backchannel.logout.session.required": "true",
+                "client_credentials.use_refresh_token": "false",
+                "saml_force_name_id_format": "false",
+                "saml.client.signature": "false",
+                "tls.client.certificate.bound.access.tokens": "false",
+                "saml.authnstatement": "false",
+                "display.on.consent.screen": "false",
+                "pkce.code.challenge.method": "S256",
+                "saml.onetimeuse.condition": "false"
+            },
+            "authenticationFlowBindingOverrides": {},
+            "fullScopeAllowed": true,
+            "nodeReRegistrationTimeout": -1,
+            "protocolMappers": [
+                {
+                    "id": "6b0a5bf7-8237-4c54-95d6-7d8c4fd4cf5a",
+                    "name": "clearance",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "multivalued": "true",
+                        "user.attribute": "clearance",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "clearance",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "id": "95bdab9f-d4aa-4c27-b9d1-8c5ffd5cedf3",
+                    "name": "coiTags",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "user.attribute": "coiTags",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "coiTags",
+                        "jsonType.label": "JSON"
+                    }
+                },
+                {
+                    "id": "86b9fbb8-bb8b-4faa-9ee9-2deea3f42b45",
+                    "name": "realm roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "user.attribute": "foo",
+                        "access.token.claim": "true",
+                        "claim.name": "roles",
+                        "jsonType.label": "String",
+                        "multivalued": "true"
+                    }
+                },
+                {
+                    "id": "fdb38c00-dae1-4ae5-a4b9-c33d0fafee08",
+                    "name": "client roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-client-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "user.attribute": "foo",
+                        "access.token.claim": "true",
+                        "claim.name": "resource_access.${client_id}.roles",
+                        "jsonType.label": "String",
+                        "multivalued": "true"
+                    }
+                }
+            ],
+            "defaultClientScopes": [
+                "web-origins",
+                "roles",
+                "profile",
+                "custom-attributes",
+                "email"
+            ],
+            "optionalClientScopes": [
+                "address",
+                "phone",
+                "offline_access",
+                "microprofile-jwt"
+            ],
+            "authorizationSettings": {
+                "allowRemoteResourceManagement": true,
+                "policyEnforcementMode": "ENFORCING",
+                "resources": [],
+                "policies": [],
+                "scopes": [],
+                "decisionStrategy": "UNANIMOUS"
+            }
+        },
+        {
+            "id": "89d33052-0e68-4cbe-b467-3e7ac4b5b3ea",
+            "clientId": "dive25-frontend",
+            "name": "DIVE25 Frontend Application",
+            "description": "Web frontend for DIVE25 platform",
+            "rootUrl": "http://localhost:3002",
+            "baseUrl": "http://localhost:3002",
+            "surrogateAuthRequired": false,
+            "enabled": true,
+            "alwaysDisplayInConsole": true,
+            "clientAuthenticatorType": "client-secret",
+            "redirectUris": [
+                "http://localhost:3002/*",
+                "https://dive25.com/*"
+            ],
+            "webOrigins": [
+                "http://localhost:3002",
+                "https://dive25.com",
+                "+"
+            ],
+            "notBefore": 0,
+            "bearerOnly": false,
+            "consentRequired": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "publicClient": true,
+            "frontchannelLogout": true,
+            "protocol": "openid-connect",
+            "attributes": {
+                "post.logout.redirect.uris": "http://localhost:3002/*|https://dive25.com/*",
+                "pkce.code.challenge.method": "S256",
+                "oauth2.device.authorization.grant.enabled": "false",
+                "backchannel.logout.session.required": "true",
+                "backchannel.logout.revoke.offline.tokens": "false",
+                "access.token.lifespan": "1800",
+                "realm_client": "false"
+            },
+            "authenticationFlowBindingOverrides": {},
+            "fullScopeAllowed": true,
+            "nodeReRegistrationTimeout": -1,
+            "defaultClientScopes": [
+                "web-origins",
+                "roles",
+                "profile",
+                "email",
+                "openid"
+            ],
+            "optionalClientScopes": [
+                "address",
+                "phone",
+                "offline_access",
+                "microprofile-jwt"
+            ]
+        }
+    ],
+    "clientScopes": [
+        {
+            "id": "9bb77fdd-7a3b-475e-877b-4d1907b88e30",
+            "name": "profile",
+            "description": "User profile information",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "true",
+                "consent.screen.text": "${profileScopeConsentText}"
+            },
+            "protocolMappers": [
+                {
+                    "id": "a1a67e25-19fe-4a7c-9a99-3c67ea7e9096",
+                    "name": "full name",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-full-name-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "userinfo.token.claim": "true"
+                    }
+                },
+                {
+                    "id": "aae2c29b-6a21-4c62-b439-a84d4f7a8c4e",
+                    "name": "family name",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-property-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "lastName",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "family_name",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "id": "af3df6a3-8b82-4f9c-b93a-7cc37bbae968",
+                    "name": "given name",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-property-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "firstName",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "given_name",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "id": "b4bdb5a4-d2ca-44e5-ae59-b9c73f827ccd",
+                    "name": "username",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-property-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "username",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "preferred_username",
+                        "jsonType.label": "String"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "95e2ff9d-46b7-4bdf-b676-c675b3bc9ec4",
+            "name": "email",
+            "description": "Email",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "true",
+                "consent.screen.text": "${emailScopeConsentText}"
+            },
+            "protocolMappers": [
+                {
+                    "id": "cc1f7ea1-0e02-4eaf-a6a5-3e5f7a8a4f73",
+                    "name": "email",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-property-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "email",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "email",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "id": "c6e6cdea-fd97-47b7-9a1e-b89b9e0d2a0f",
+                    "name": "email verified",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-property-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "emailVerified",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "email_verified",
+                        "jsonType.label": "boolean"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "2c1e3a69-e86e-43a7-9a5a-1a66fa97affa",
+            "name": "custom-attributes",
+            "description": "DIVE25 custom user attributes",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "true"
+            },
+            "protocolMappers": [
+                {
+                    "id": "ae2f1bb7-9d5d-4c1a-8063-6e6d1d1f2fcb",
+                    "name": "clearance",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "clearance",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "clearance",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "id": "f3f6e5d7-9e5a-4d8b-8c7a-4f1e3d2c1b0a",
+                    "name": "coiTags",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "coiTags",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "coiTags",
+                        "jsonType.label": "JSON"
+                    }
+                }
+            ]
+        }
+    ],
+    "browserSecurityHeaders": {
+        "contentSecurityPolicyReportOnly": "",
+        "xContentTypeOptions": "nosniff",
+        "referrerPolicy": "no-referrer",
+        "xRobotsTag": "none",
+        "xFrameOptions": "SAMEORIGIN",
+        "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+        "xXSSProtection": "1; mode=block",
+        "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+    },
+    "smtpServer": {
+        "host": "smtp.gmail.com",
+        "port": "587",
+        "fromDisplayName": "DIVE25 Platform",
+        "from": "noreply@dive25.com",
+        "replyToDisplayName": "DIVE25 Support",
+        "replyTo": "support@dive25.com",
+        "ssl": "false",
+        "starttls": "true",
+        "auth": "true",
+        "user": "${env:SMTP_USER}",
+        "password": "${env:SMTP_PASSWORD}"
+    },
+    "internationalizationEnabled": true,
+    "supportedLocales": [
+        "en",
+        "es",
+        "fr"
+    ],
+    "defaultLocale": "en",
+    "eventsEnabled": true,
+    "eventsListeners": [
+        "jboss-logging"
+    ],
+    "enabledEventTypes": [
+        "LOGIN",
+        "LOGOUT",
+        "REGISTER",
+        "UPDATE_PROFILE",
+        "REMOVE_TOTP",
+        "UPDATE_PASSWORD",
+        "FEDERATED_IDENTITY_LINK",
+        "LOGIN_ERROR",
+        "REGISTER_ERROR",
+        "USER_DELETE_ERROR"
+    ],
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": true,
+    "components": {
+        "org.keycloak.keys.KeyProvider": [
+            {
+                "id": "90c7f84e-7a75-4a88-b6fb-8c36d7f64c39",
+                "name": "rsa-generated",
+                "providerId": "rsa-generated",
+                "subComponents": {},
+                "config": {
+                    "enabled": [
+                        "true"
+                    ],
+                    "priority": [
+                        "100"
+                    ],
+                    "algorithm": [
+                        "RS256"
+                    ]
+                }
+            },
+            {
+                "id": "5d77e16c-fed9-43f3-a7b1-8be5c2faca1b",
+                "name": "hmac-generated",
+                "providerId": "hmac-generated",
+                "subComponents": {},
+                "config": {
+                    "enabled": [
+                        "true"
+                    ],
+                    "priority": [
+                        "100"
+                    ],
+                    "algorithm": [
+                        "HS256"
+                    ]
+                }
+            }
+        ],
+        "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+            {
+                "id": "96d5c731-0a9c-4f8e-8fca-9c0c30832dc4",
+                "name": "Full Scope Disabled",
+                "providerId": "scope",
+                "subType": "anonymous",
+                "subComponents": {},
+                "config": {}
+            },
+            {
+                "id": "62ce8eb8-ba81-4f20-a1e9-019971bde3fc",
+                "name": "Trusted Hosts",
+                "providerId": "trusted-hosts",
+                "subType": "anonymous",
+                "subComponents": {},
+                "config": {
+                    "host-sending-registration-request-must-match": [
+                        "true"
+                    ],
+                    "client-uris-must-match": [
+                        "true"
+                    ]
+                }
+            },
+            {
+                "id": "a5a306d7-fcc4-4609-a679-004b6c776cd8",
+                "name": "Max Clients Limit",
+                "providerId": "max-clients",
+                "subType": "anonymous",
+                "subComponents": {},
+                "config": {
+                    "max-clients": [
+                        "200"
+                    ]
+                }
+            },
+            {
+                "id": "616d5c61-c4f3-4cec-9510-840a3cd04683",
+                "name": "Allowed Protocol Mapper Types",
+                "providerId": "allowed-protocol-mappers",
+                "subType": "authenticated",
+                "subComponents": {},
+                "config": {
+                    "allowed-protocol-mapper-types": [
+                        "saml-role-list-mapper",
+                        "oidc-sha256-pairwise-sub-mapper",
+                        "oidc-address-mapper",
+                        "saml-user-property-mapper",
+                        "oidc-usermodel-attribute-mapper",
+                        "oidc-usermodel-property-mapper",
+                        "oidc-full-name-mapper",
+                        "saml-user-attribute-mapper"
+                    ]
+                }
+            },
+            {
+                "id": "b765c1c3-b1ba-4943-82a2-136ee32c9ece",
+                "name": "Allowed Client Scopes",
+                "providerId": "allowed-client-templates",
+                "subType": "authenticated",
+                "subComponents": {},
+                "config": {
+                    "allow-default-scopes": [
+                        "true"
+                    ]
+                }
+            },
+            {
+                "id": "b1d3bbe8-d20a-4d58-a7bc-51e5cb97b52d",
+                "name": "Allowed Protocol Mapper Types",
+                "providerId": "allowed-protocol-mappers",
+                "subType": "anonymous",
+                "subComponents": {},
+                "config": {
+                    "allowed-protocol-mapper-types": [
+                        "saml-role-list-mapper",
+                        "oidc-sha256-pairwise-sub-mapper",
+                        "oidc-usermodel-property-mapper",
+                        "oidc-full-name-mapper",
+                        "saml-user-attribute-mapper",
+                        "oidc-address-mapper",
+                        "saml-user-property-mapper",
+                        "oidc-usermodel-attribute-mapper"
+                    ]
+                }
+            },
+            {
+                "id": "6dc25ff2-2ce5-4b43-aa9a-a4ba4bb5f53e",
+                "name": "Allowed Client Scopes",
+                "providerId": "allowed-client-templates",
+                "subType": "anonymous",
+                "subComponents": {},
+                "config": {
+                    "allow-default-scopes": [
+                        "true"
+                    ]
+                }
+            }
+        ],
+        "org.keycloak.userprofile.UserProfileProvider": [
+            {
+                "id": "c5de3bd6-ed0a-4092-833a-85bb73f9cdad",
+                "providerId": "declarative-user-profile",
+                "subComponents": {},
+                "config": {
+                    "kc.user.profile.config": [
+                        "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"clearance\",\"displayName\":\"${profile.attributes.clearance}\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"group\":\"dive25-attributes\",\"multivalued\":false},{\"name\":\"coiTags\",\"displayName\":\"${profile.attributes.coiTags}\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"group\":\"dive25-attributes\",\"multivalued\":true}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"},{\"name\":\"dive25-attributes\",\"displayHeader\":\"${profile.attribute-group.dive25-attributes}\",\"displayDescription\":\"${profile.attribute-group-description.dive25-attributes}\",\"annotations\":{}}]}"
+                    ]
+                }
+            }
+        ],
+        "org.keycloak.storage.UserStorageProvider": [
+            {
+                "id": "dive25-ldap",
+                "name": "dive25-ldap",
+                "providerId": "ldap",
+                "subComponents": {},
+                "config": {
+                    "pagination": [
+                        "true"
+                    ],
+                    "debug": [
+                        "false"
+                    ],
+                    "searchScope": [
+                        "1"
+                    ],
+                    "useTruststoreSpi": [
+                        "never"
+                    ],
+                    "connectionPooling": [
+                        "true"
+                    ],
+                    "usersDn": [
+                        "ou=users,dc=dive25,dc=local"
+                    ],
+                    "priority": [
+                        "0"
+                    ],
+                    "importEnabled": [
+                        "true"
+                    ],
+                    "enabled": [
+                        "true"
+                    ],
+                    "userObjectClasses": [
+                        "natoPerson"
+                    ],
+                    "bindCredential": [
+                        "${env:LDAP_BIND_CREDENTIAL}"
+                    ],
+                    "usernameLDAPAttribute": [
+                        "uid"
+                    ],
+                    "bindDn": [
+                        "cn=readonly,dc=dive25,dc=local"
+                    ],
+                    "rdnLDAPAttribute": [
+                        "uid"
+                    ],
+                    "vendor": [
+                        "other"
+                    ],
+                    "editMode": [
+                        "READ_ONLY"
+                    ],
+                    "uuidLDAPAttribute": [
+                        "entryUUID"
+                    ],
+                    "allowKerberosAuthentication": [
+                        "false"
+                    ],
+                    "connectionUrl": [
+                        "ldap://openldap:389"
+                    ],
+                    "syncRegistrations": [
+                        "false"
+                    ],
+                    "authType": [
+                        "simple"
+                    ]
+                }
+            }
+        ]
+    },
+    "defaultDefaultClientScopes": [
+        "web-origins",
+        "roles",
+        "profile",
+        "email",
+        "custom-attributes"
+    ],
+    "defaultOptionalClientScopes": [
+        "offline_access",
+        "address",
+        "phone",
+        "microprofile-jwt"
+    ],
+    "browserFlow": "browser",
+    "registrationFlow": "registration",
+    "directGrantFlow": "direct grant",
+    "resetCredentialsFlow": "reset credentials",
+    "clientAuthenticationFlow": "clients",
+    "dockerAuthenticationFlow": "docker auth",
+    "firstBrokerLoginFlow": "first broker login",
+    "attributes": {
+        "cibaBackchannelTokenDeliveryMode": "poll",
+        "cibaExpiresIn": "120",
+        "cibaAuthRequestedUserHint": "login_hint",
+        "oauth2DeviceCodeLifespan": "600",
+        "oauth2DevicePollingInterval": "5",
+        "parRequestUriLifespan": "60",
+        "cibaInterval": "5",
+        "realmReusableOtpCode": "false"
+    },
+    "keycloakVersion": "26.0.8",
+    "userManagedAccessAllowed": false,
+    "organizationsEnabled": false,
+    "clientProfiles": {
+        "profiles": []
+    },
+    "clientPolicies": {
+        "policies": []
+    }
+}

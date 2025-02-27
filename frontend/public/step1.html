@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>3P Cookie Check</title>
+</head>
+
+<body>
+    <script>
+        try {
+            parent.postMessage("step1complete", location.origin);
+        } catch (e) {
+            console.error('3P cookie check failed:', e);
+        }
+    </script>
+</body>
+
+</html>

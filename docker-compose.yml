@@ -47,6 +47,7 @@ services:
     command:
       - start-dev
       - --import-realm
+      - --log-level=DEBUG
       - --db=postgres
       - --db-url=jdbc:postgresql://postgres:5432/keycloak
       - --db-username=keycloak
@@ -62,13 +63,20 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - LDAP_READONLY_PASSWORD=${LDAP_READONLY_PASSWORD}
+      - SMTP_USER=${SMTP_USER:-noreply@dive25.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
-      - ./config/keycloak/dive25-realm.json:/opt/keycloak/data/import/dive25-realm.json:ro
+      - ./config/keycloak/dive25-realm-full.json:/opt/keycloak/data/import/dive25-realm-full.json:ro
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      openldap:
+        condition: service_started
     networks:
       - dive25-net
     healthcheck:
@@ -76,13 +84,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     deploy:
       resources:
         limits:
           memory: 1G
         reservations:
           memory: 512M
+    restart: unless-stopped
 
   api:
     build:
@@ -123,7 +132,7 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000
       - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
-      - NEXT_PUBLIC_KEYCLOAK_REALM=dive25
+      - NEXT_PUBLIC_KEYCLOAK_REALM=dive25-realm-full
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=dive25-frontend
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
     ports:

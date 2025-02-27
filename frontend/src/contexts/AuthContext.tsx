@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Dynamically import Keycloak only on client side
         const Keycloak = (await import('keycloak-js')).default;
         keycloak = new Keycloak({
-          url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8080',
+          url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8080/auth',
           realm: 'dive25',
           clientId: 'dive25-frontend'
         });

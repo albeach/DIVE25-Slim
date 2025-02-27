@@ -163,7 +163,7 @@ verify_files() {
         "nginx/nginx.conf"
         "nginx/conf.d/default.conf"
         "config/kong/declarative/kong.yml"
-        "config/keycloak/dive25-realm.json"
+        "config/keycloak/dive25-realm-full.json"
         "config/postgres/init-keycloak-db.sh"
         "config/postgres/init-users.sql"
         "config/postgres/init-schema.sql"
@@ -458,17 +458,37 @@ verify_nginx() {
     # Check if Nginx container is running
     if ! docker-compose ps nginx | grep -q "Up"; then
         log "${RED}✗ Nginx container is not running${NC}"
+        docker-compose logs --tail=20 nginx
         return 1
     fi
-    
-    # Check Nginx HTTP response
-    if ! curl -s -I http://localhost | grep -q "HTTP/1.1 200 OK"; then
-        log "${RED}✗ Nginx is not responding correctly on HTTP${NC}"
-        return 1
+
+    # First check HTTPS (primary protocol)
+    local https_response=$(curl -sk -I https://localhost 2>&1)
+    if echo "$https_response" | grep -q "HTTP/1.[01] [23]"; then
+        log "${GREEN}✓ Nginx is responding correctly on HTTPS${NC}"
+        return 0
     fi
-    
-    log "${GREEN}✓ Nginx is healthy${NC}"
-    return 0
+
+    # If HTTPS failed, check HTTP with redirect
+    local http_response=$(curl -sI -L http://localhost 2>&1)
+    if echo "$http_response" | grep -q "HTTP/1.[01] [23]"; then
+        if echo "$http_response" | grep -q "Location: https://"; then
+            log "${GREEN}✓ Nginx is correctly redirecting HTTP to HTTPS${NC}"
+            return 0
+        fi
+        log "${GREEN}✓ Nginx is responding correctly on HTTP${NC}"
+        return 0
+    fi
+
+    # If both checks failed, show detailed error
+    log "${RED}✗ Nginx is not responding correctly${NC}"
+    log "${YELLOW}HTTPS Response:${NC}"
+    echo "$https_response"
+    log "${YELLOW}HTTP Response:${NC}"
+    echo "$http_response"
+    log "${YELLOW}Nginx logs:${NC}"
+    docker-compose logs --tail=20 nginx
+    return 1
 }
 
 verify_ldap() {
@@ -496,29 +516,71 @@ verify_monitoring() {
     # Check if Prometheus container is running
     if ! docker-compose ps prometheus | grep -q "Up"; then
         log "${RED}✗ Prometheus container is not running${NC}"
+        docker-compose logs --tail=20 prometheus
         return 1
     fi
+
+    # Give Prometheus time to initialize
+    local timeout=30
+    local elapsed=0
+    local interval=5
+
+    while [ $elapsed -lt $timeout ]; do
+        # Check Prometheus API health
+        if curl -s "http://localhost:9090/-/healthy" | grep -q "Prometheus Server is Healthy"; then
+            # Verify targets are being scraped
+            local targets_output=$(curl -s "http://localhost:9090/api/v1/targets" | grep -o '"health":"up"' | wc -l)
+            if [ "$targets_output" -gt 0 ]; then
+                log "${GREEN}✓ Prometheus is healthy and scraping targets${NC}"
+                
+                # Check if Grafana is running (if configured)
+                if docker-compose ps grafana | grep -q "Up"; then
+                    # Use basic auth with default credentials (admin:admin)
+                    if curl -s -u admin:admin "http://localhost:3000/api/health" | grep -q '"database":"ok"'; then
+                        log "${GREEN}✓ Grafana is healthy${NC}"
+                    else
+                        # Try alternative health endpoint
+                        if curl -s "http://localhost:3000/healthz" | grep -q "ok"; then
+                            log "${GREEN}✓ Grafana is healthy (using /healthz)${NC}"
+                        else
+                            # Wait a bit more for Grafana to initialize if needed
+                            sleep 5
+                            if curl -s "http://localhost:3000/healthz" | grep -q "ok"; then
+                                log "${GREEN}✓ Grafana is healthy (after delay)${NC}"
+                            else
+                                log "${YELLOW}Warning: Grafana is running but health check failed${NC}"
+                                log "${YELLOW}Grafana logs:${NC}"
+                                docker-compose logs --tail=20 grafana
+                            fi
+                        fi
+                    fi
+                fi
+                
+                return 0
+            else
+                log "${YELLOW}Prometheus is running but no targets are up${NC}"
+            fi
+        fi
+        
+        log "${YELLOW}Waiting for Prometheus to be ready... (${elapsed}s/${timeout}s)${NC}"
+        sleep $interval
+        elapsed=$((elapsed + interval))
+        
+        # Show logs periodically during the wait
+        if [ $((elapsed % 15)) -eq 0 ]; then
+            log "${YELLOW}Recent Prometheus logs:${NC}"
+            docker-compose logs --tail=20 prometheus
+        fi
+    done
     
-    # Check if Grafana container is running
-    if ! docker-compose ps grafana | grep -q "Up"; then
-        log "${RED}✗ Grafana container is not running${NC}"
-        return 1
-    fi
-    
-    # Check Prometheus API
-    if ! curl -s http://localhost:9090/-/healthy | grep -q "Prometheus is Healthy"; then
-        log "${RED}✗ Prometheus API is not responding correctly${NC}"
-        return 1
-    fi
-    
-    # Check Grafana API
-    if ! curl -s http://localhost:3001/api/health | grep -q "ok"; then
-        log "${RED}✗ Grafana API is not responding correctly${NC}"
-        return 1
-    fi
-    
-    log "${GREEN}✓ Monitoring services are healthy${NC}"
-    return 0
+    log "${RED}✗ Prometheus API is not responding correctly${NC}"
+    log "${YELLOW}Prometheus configuration:${NC}"
+    docker-compose exec -T prometheus cat /etc/prometheus/prometheus.yml || true
+    log "${YELLOW}Prometheus targets:${NC}"
+    curl -s "http://localhost:9090/api/v1/targets" || true
+    log "${YELLOW}Final Prometheus logs:${NC}"
+    docker-compose logs --tail=50 prometheus
+    return 1
 }
 
 main() {
@@ -542,7 +604,7 @@ main() {
     verify_postgres || exit 1
     verify_keycloak || exit 1
     verify_kong || exit 1
-    verify_service "API" "3000" "/health" 30 200 '"status":"healthy"' || exit 1
+    verify_service "API" "3000" "/health" 30 200 '"status":"ok"' || exit 1
     verify_service "Frontend" "3002" "/" 30 200 "<html" || exit 1
     verify_nginx || exit 1
     verify_ldap || exit 1

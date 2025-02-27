@@ -1,13 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 
 <head>
-    <title>Silent SSO check</title>
+    <meta charset="utf-8" />
+    <title>Silent SSO Check</title>
 </head>
 
 <body>
     <script>
-        parent.postMessage(location.href, location.origin);
+        try {
+            parent.postMessage(location.href, location.origin);
+        } catch (e) {
+            console.error('Silent check SSO failed:', e);
+            window.close();
+        }
     </script>
 </body>
 
